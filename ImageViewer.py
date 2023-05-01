@@ -36,27 +36,9 @@ class ImageViewer(QListView):
         image_label = QLabel()
         # Example filename
         filename = imagePath
-
-        # Split the filename by '/'
-        fragments = filename.split('/')
-
-        # Get the last fragment
-        last_fragment = fragments[-1]
-
-        # Remove the '_small' suffix from the last fragment
-        last_fragment = last_fragment.replace('_small', '')
-
-        # Remove the 'small' string from the next fragment
-        next_fragment = fragments[-2]
-        next_fragment = next_fragment.replace('small', '')
-
-        # Replace the last fragment and next fragment in the list
-        fragments[-1] = last_fragment
-        fragments[-2] = next_fragment
-
-        # Join the fragments back into a path string
-        new_filename = '/'.join(fragments)
-        pixmap = QPixmap(new_filename)
+        filename = filename.replace("_small","")
+        filename = filename.replace("small","")
+        pixmap = QPixmap(filename)
         image_label.setPixmap(pixmap)
 
         # create a message box and set its layout
