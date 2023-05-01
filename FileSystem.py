@@ -12,7 +12,7 @@ class CustomFileSystemModel(QFileSystemModel):
 class FileSystem(QTreeView):
     def __init__(self,image_viewer : ImageViewer):
         super().__init__()
-        self.dir_model = CustomFileSystemModel(r"C:\Users\wojte\OneDrive\Pulpit\klockilego\klocki")
+        self.dir_model = CustomFileSystemModel(r"C:\Users\wojte\OneDrive\Pulpit\klockilego")
         self.dir_model.setFilter(QDir.NoDotAndDotDot | QDir.AllDirs)
         self.setModel(self.dir_model)
         self.clicked.connect(self.on_tree_clicked)

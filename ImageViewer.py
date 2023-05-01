@@ -34,7 +34,29 @@ class ImageViewer(QListView):
 
         # create a label widget to display the image
         image_label = QLabel()
-        pixmap = QPixmap(imagePath)
+        # Example filename
+        filename = imagePath
+
+        # Split the filename by '/'
+        fragments = filename.split('/')
+
+        # Get the last fragment
+        last_fragment = fragments[-1]
+
+        # Remove the '_small' suffix from the last fragment
+        last_fragment = last_fragment.replace('_small', '')
+
+        # Remove the 'small' string from the next fragment
+        next_fragment = fragments[-2]
+        next_fragment = next_fragment.replace('small', '')
+
+        # Replace the last fragment and next fragment in the list
+        fragments[-1] = last_fragment
+        fragments[-2] = next_fragment
+
+        # Join the fragments back into a path string
+        new_filename = '/'.join(fragments)
+        pixmap = QPixmap(new_filename)
         image_label.setPixmap(pixmap)
 
         # create a message box and set its layout
@@ -54,14 +76,7 @@ class ImageDelegate(QAbstractItemDelegate):
         if not index.isValid():
             return
         pixmap = index.data()
-        painter.save()
-        if option.state & QStyle.State_Selected:
-            # add a border around the pixmap if it's selected
-            painter.setPen(QPen(Qt.red, 2, Qt.SolidLine))
-            painter.drawRect(option.rect.x(), option.rect.y(), option.rect.width()-1, option.rect.height()-1)
-        else:
-            painter.drawPixmap(option.rect.x(), option.rect.y(), pixmap)
-        painter.restore()
+        painter.drawPixmap(option.rect.x(), option.rect.y(), pixmap)
 
     def sizeHint(self, option, index):
         return QSize(thumbnail_size + 16, thumbnail_size + 16)
@@ -89,23 +104,25 @@ class PixmapItem(QStandardItem):
 
 class LoadImagesWorker(QRunnable):
     imageLoaded = pyqtSignal(QPixmap,str)
-    def __init__(self, folder, file_chunk,list,mutex):
+    def __init__(self, folder, file_chunk,list,mutex,i):
         super().__init__()
         self.folder = folder
         self.file_chunk = file_chunk
         self.results = list
         self.mutex = mutex
-
+        self.i = i
     def run(self):
         image_extensions = QImageReader.supportedImageFormats()
 
         for file in self.file_chunk:
             if file.split('.')[-1].encode() in image_extensions:
                 path = os.path.join(self.folder, file)
-                pixmap = QPixmap(path).scaled(thumbnail_size, thumbnail_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                pixmap = QPixmap(path)
                 self.mutex.lock()
-                self.results.append((pixmap, path))
+
                 self.mutex.unlock()
+                self.results.append((pixmap, path))
+
 
 class LoadImages(QThread):
     def __init__(self, folder, parent,results):
@@ -116,7 +133,7 @@ class LoadImages(QThread):
         self.threadpool = QThreadPool.globalInstance()
         self.mutex = QMutex()
     def run(self):
-        start = time.time()
+
         num_threads = QThreadPool.globalInstance().maxThreadCount()
         all_files = []
         for dirpath, _, filenames in os.walk(self.folder):
@@ -124,6 +141,7 @@ class LoadImages(QThread):
                 all_files.append(os.path.join(dirpath, filename))
         chunk_size = (len(all_files) + num_threads - 1) // num_threads  # divide files into equal chunks
         chunks = [all_files[i:i + chunk_size] for i in range(0, len(all_files), chunk_size)]
+        self.results = [None] * len(all_files)
         for chunk in chunks:
             worker = LoadImagesWorker(self.folder, chunk, self.results,self.mutex)
             self.threadpool.start(worker)
@@ -137,25 +155,32 @@ class ImageListModel(QStandardItemModel):
         self.results = []
 
     def load_images_from_folder(self, folder):
-        self.loader = LoadImages(folder, self, self.results)  # create LoadImages instance
-        self.loader.start()
-        self.loader.finished.connect(
-            lambda:self.on_all_images_loaded(self.results)
-        )
+            self.clear()
+            image_extensions = QImageReader.supportedImageFormats()
+            for root, _, files in os.walk(folder):
+                for file in files:
+                    if file.split('.')[-1].encode() in image_extensions:
+                        path = os.path.join(root, file)
+                        item = PixmapItem(QPixmap(path),path)
+                        self.results.append(item)
+                        self.appendRow(item)
+                break
     def on_all_images_loaded(self, results):
-        self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount() + len(results) - 1)
-        self.results = results
-        self.batch_size = 5  # set the batch size to 100
-        self.current_index = 0
-        self.process_batch()
 
+        self.end = time.time()
+        print(self.end-self.start)
+        self.start=time.time()
+        self.results = results
+        self.current_index = 0
+        self.batch_size = 200
+        self.process_batch()
     def process_batch(self):
         for i in range(self.current_index, min(self.current_index + self.batch_size, len(self.results))):
             pixmap, filename = self.results[i]
-            self.appendRow(PixmapItem(pixmap, filename))
+            self.appendRow(PixmapItem(pixmap,filename))
         self.current_index += self.batch_size
-        print(f"{self.current_index}, {len(self.results)}")
         if self.current_index < len(self.results):
-            QtCore.QTimer.singleShot(10, self.process_batch)  # process next batch in event loop
+            QtCore.QTimer.singleShot(0, self.process_batch)  # process next batch in event loop
         else:
-            self.endInsertRows()
+            self.end = time.time()
+            print(self.end - self.start)
