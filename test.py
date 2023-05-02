@@ -111,4 +111,8 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     image_browser = ImageBrowser()
     image_browser.show()
+<<<<<<< HEAD
     sys.exit(app.exec_())
+=======
+    sys.exit(app.exec_())
+>>>>>>> ed2d20c8189528db45193de931087be1aa62beb7

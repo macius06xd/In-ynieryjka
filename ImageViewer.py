@@ -3,10 +3,11 @@ import time
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import (QApplication, QFileSystemModel, QTreeView, QSplitter, QMainWindow, QScrollArea, QWidget,
                              QVBoxLayout, QListView, QAbstractItemView, QAbstractItemDelegate, QLabel, QMessageBox,
-                             QStyle)
-from PyQt5.QtGui import QPixmap, QImageReader, QStandardItemModel, QStandardItem, QPen, QIcon
+                             QStyle, QListWidget, QStyledItemDelegate)
+from PyQt5.QtGui import QPixmap, QImageReader, QStandardItemModel, QStandardItem, QPen, QIcon, QColor, QDrag
 from PyQt5.QtCore import Qt, QDir, QSize, QEvent, pyqtSignal, QThread, QObject, QRunnable, QThreadPool, QMutex, \
-    QModelIndex
+    QModelIndex, QAbstractListModel, QMimeData, QByteArray, QDataStream, QIODevice, QPoint, QItemSelectionModel, \
+    QVariant
 
 thumbnail_size = 64
 import sys
@@ -16,28 +17,44 @@ class ImageViewer(QListView):
     def __init__(self):
         super().__init__()
 
-        self.image_model = ImageListModel()
-        self.setModel(self.image_model)
         self.setViewMode(QListView.IconMode)
         self.setResizeMode(QListView.Adjust)
+        model = MyListModel(list())
+        self.setModel(model)
         self.setGridSize(QSize(thumbnail_size + 16, thumbnail_size + 16))
         self.setSpacing(10)
+        self.results = []
         self.setWordWrap(True)
         self.setUniformItemSizes(True)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setItemDelegate(ImageDelegate())
+        self.selectionModel().selectionChanged.connect(self.manage_selection)
         self.itemDelegate().imageClicked.connect(self.onImageClicked)
-        self.image_viewer_window = None
+
+    def handle_image_clicked(self, path):
+        selected_paths = [item.get_path() for item in self.selectedIndexes()]
+        print("Selected images:", selected_paths)
+
+    def manage_selection(self, selected, deselected):
+        selected_indexes = self.selectionModel().selectedIndexes()
+        for index in selected_indexes:
+            item = self.model().itemFromIndex(index)
+            print(item.get_path())
 
     def onImageClicked(self, imagePath):
         print("Image clicked:", imagePath)
+        for row in range(self.model().rowCount()):
+            index = self.model().index(row, 0)
+            if index.data(Qt.UserRole) == imagePath:
+                self.selectionModel().select(index, QItemSelectionModel.Select)
+                break
 
         # create a label widget to display the image
         image_label = QLabel()
         # Example filename
         filename = imagePath
-        filename = filename.replace("_small","")
-        filename = filename.replace("small","")
+        filename = filename.replace("_small", "")
+        filename = filename.replace("small", "")
         pixmap = QPixmap(filename)
         image_label.setPixmap(pixmap)
 
@@ -51,23 +68,39 @@ class ImageViewer(QListView):
 
         msg_box.exec_()
     def load_images_from_folder(self,path):
-        self.image_model.load_images_from_folder(path)
-class ImageDelegate(QAbstractItemDelegate):
+        image_extensions = QImageReader.supportedImageFormats()
+        for root, _, files in os.walk(path):
+            for file in files:
+                if file.split('.')[-1].encode() in image_extensions:
+                    path = os.path.join(root, file)
+                    item = PixmapItem(QPixmap(path), path)
+                    item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                    self.results.append(item)
+                    self.model().listdata.append(item)
+                    self.model().layoutChanged.emit()
+            break
+class ImageDelegate(QStyledItemDelegate):
     imageClicked = pyqtSignal(str)
+
     def paint(self, painter, option, index):
         if not index.isValid():
             return
         pixmap = index.data()
-        painter.drawPixmap(option.rect.x(), option.rect.y(), pixmap)
+        # Draw the pixmap
+        painter.drawPixmap(option.rect.x(), option.rect.y(), pixmap.pixmap)
+
+        # Check if the item is selected
+        if option.state & QStyle.State_Selected:
+            # Draw a border around the item
+            pen = QPen(QColor(0, 0, 255), 3, Qt.SolidLine)
+            painter.setPen(pen)
+            painter.drawRect(option.rect)
 
     def sizeHint(self, option, index):
-        return QSize(thumbnail_size + 16, thumbnail_size + 16)
+        return QSize(thumbnail_size, thumbnail_size)
 
-    def editorEvent(self, event, model, option, index):
-        if event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
-            self.imageClicked.emit(index.data(Qt.UserRole))
-            return True
-        return False
+    def flags(self, index):
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
 
 class PixmapItem(QStandardItem):
@@ -75,6 +108,7 @@ class PixmapItem(QStandardItem):
         super().__init__()
         self.pixmap = pixmap
         self.path = path
+        self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)  # make item selectable
 
     def data(self, role):
         if role == Qt.UserRole:
@@ -84,85 +118,22 @@ class PixmapItem(QStandardItem):
         return self.path
 
 
-class LoadImagesWorker(QRunnable):
-    imageLoaded = pyqtSignal(QPixmap,str)
-    def __init__(self, folder, file_chunk,list,mutex,i):
-        super().__init__()
-        self.folder = folder
-        self.file_chunk = file_chunk
-        self.results = list
-        self.mutex = mutex
-        self.i = i
-    def run(self):
-        image_extensions = QImageReader.supportedImageFormats()
-
-        for file in self.file_chunk:
-            if file.split('.')[-1].encode() in image_extensions:
-                path = os.path.join(self.folder, file)
-                pixmap = QPixmap(path)
-                self.mutex.lock()
-
-                self.mutex.unlock()
-                self.results.append((pixmap, path))
 
 
-class LoadImages(QThread):
-    def __init__(self, folder, parent,results):
-        super().__init__()
-        self.folder = folder
-        self.parent = parent
-        self.results = results
-        self.threadpool = QThreadPool.globalInstance()
-        self.mutex = QMutex()
-    def run(self):
+class MyListModel(QAbstractListModel):
+    def __init__(self, datain, parent=None, *args):
+        """ datain: a list where each item is a row
+        """
+        QAbstractListModel.__init__(self, parent, *args)
+        self.listdata = datain
 
-        num_threads = QThreadPool.globalInstance().maxThreadCount()
-        all_files = []
-        for dirpath, _, filenames in os.walk(self.folder):
-            for filename in filenames:
-                all_files.append(os.path.join(dirpath, filename))
-        chunk_size = (len(all_files) + num_threads - 1) // num_threads  # divide files into equal chunks
-        chunks = [all_files[i:i + chunk_size] for i in range(0, len(all_files), chunk_size)]
-        self.results = [None] * len(all_files)
-        for chunk in chunks:
-            worker = LoadImagesWorker(self.folder, chunk, self.results,self.mutex)
-            self.threadpool.start(worker)
+    def rowCount(self, parent=QModelIndex()):
+        return len(self.listdata)
 
-        self.threadpool.waitForDone()
-class ImageListModel(QStandardItemModel):
-    def __init__(self):
-        super().__init__()
-        self.loader = None
-        self.mutex = QMutex()
-        self.results = []
-
-    def load_images_from_folder(self, folder):
-            self.clear()
-            image_extensions = QImageReader.supportedImageFormats()
-            for root, _, files in os.walk(folder):
-                for file in files:
-                    if file.split('.')[-1].encode() in image_extensions:
-                        path = os.path.join(root, file)
-                        item = PixmapItem(QPixmap(path),path)
-                        self.results.append(item)
-                        self.appendRow(item)
-                break
-    def on_all_images_loaded(self, results):
-
-        self.end = time.time()
-        print(self.end-self.start)
-        self.start=time.time()
-        self.results = results
-        self.current_index = 0
-        self.batch_size = 200
-        self.process_batch()
-    def process_batch(self):
-        for i in range(self.current_index, min(self.current_index + self.batch_size, len(self.results))):
-            pixmap, filename = self.results[i]
-            self.appendRow(PixmapItem(pixmap,filename))
-        self.current_index += self.batch_size
-        if self.current_index < len(self.results):
-            QtCore.QTimer.singleShot(0, self.process_batch)  # process next batch in event loop
+    def data(self, index, role):
+        if index.isValid() and role == Qt.DisplayRole:
+            return self.listdata[index.row()]
         else:
-            self.end = time.time()
-            print(self.end - self.start)
+            return QVariant()
+    def itemFromIndex(self,index):
+        return self.listdata[index.row()]
