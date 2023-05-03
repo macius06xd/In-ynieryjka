@@ -16,7 +16,8 @@ import os
 class ImageViewer(QListView):
     def __init__(self):
         super().__init__()
-
+        self.files = None
+        self.active_directory = None
         self.setViewMode(QListView.IconMode)
         self.setResizeMode(QListView.Adjust)
         model = MyListModel(list())
@@ -26,23 +27,21 @@ class ImageViewer(QListView):
         self.results = []
         self.setWordWrap(True)
         self.setUniformItemSizes(True)
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setSelectionMode(QAbstractItemView.ContiguousSelection)
         self.setItemDelegate(ImageDelegate())
         self.selectionModel().selectionChanged.connect(self.manage_selection)
         self.itemDelegate().imageClicked.connect(self.onImageClicked)
 
     def handle_image_clicked(self, path):
         selected_paths = [item.get_path() for item in self.selectedIndexes()]
-        print("Selected images:", selected_paths)
 
     def manage_selection(self, selected, deselected):
         selected_indexes = self.selectionModel().selectedIndexes()
         for index in selected_indexes:
             item = self.model().itemFromIndex(index)
-            print(item.get_path())
         self.viewport().update()
     def onImageClicked(self, imagePath):
-        print("Image clicked:", imagePath)
+        print("chuj")
         for row in range(self.model().rowCount()):
             index = self.model().index(row, 0)
             if index.data(Qt.UserRole) == imagePath:
@@ -67,19 +66,40 @@ class ImageViewer(QListView):
         layout.addWidget(image_label, 0, 0, Qt.AlignHCenter | Qt.AlignVCenter)
 
         msg_box.exec_()
-    def load_images_from_folder(self,path):
+    def load_images_from_folder(self,dir):
+        print("Loading")
+        self.active_directory = dir
         self.model().listdata.clear()
         image_extensions = QImageReader.supportedImageFormats()
-        for root, _, files in os.walk(path):
-            for file in files:
-                if file.split('.')[-1].encode() in image_extensions:
-                    path = os.path.join(root, file)
-                    item = PixmapItem(QPixmap(path), path)
-                    item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                    self.results.append(item)
-                    self.model().listdata.append(item)
-                    self.model().layoutChanged.emit()
-            break
+        for file in dir.data(Qt.UserRole).children:
+            path = file.path
+            if  path.split('.')[-1].encode() in image_extensions:
+                item = PixmapItem(QPixmap(path), path)
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                self.results.append(item)
+                self.model().listdata.append(item)
+                self.model().layoutChanged.emit()
+    def add_to_model(self,data):
+        results = []
+
+        # iterate over paths and check if there is a matching item
+        for path in data:
+            if not any(item.path == path for item in  self.model().listdata):
+                results.append(path)
+        for result in results:
+            self.model().listdata.append(PixmapItem(QPixmap(result), result))
+        self.model().layoutChanged.emit()
+    def recive_notification_from_FileSystem(self,dir):
+            self.load_images_from_folder(dir)
+    def remove_from_model(self,data):
+        path = data.path
+        item = PixmapItem(QPixmap((path)),path)
+        i = 0
+        for item in self.model().listdata:
+            if item.get_path() == path:
+                del self.model().listdata[i]
+            i = i + 1
+        self.model().layoutChanged.emit()
 class ImageDelegate(QStyledItemDelegate):
     imageClicked = pyqtSignal(str)
 
@@ -102,6 +122,12 @@ class ImageDelegate(QStyledItemDelegate):
             painter.drawRect(option.rect)
 
         painter.restore()
+
+    def editorEvent(self, event, model, option, index):
+        if event.type() == QEvent.MouseButtonPress and event.button() == Qt.RightButton:
+            self.imageClicked.emit(index.data().path)
+            return True
+        return super().editorEvent(event, model, option, index)
 
 
     def sizeHint(self, option, index):
