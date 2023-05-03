@@ -40,7 +40,7 @@ class ImageViewer(QListView):
         for index in selected_indexes:
             item = self.model().itemFromIndex(index)
             print(item.get_path())
-
+        self.viewport().update()
     def onImageClicked(self, imagePath):
         print("Image clicked:", imagePath)
         for row in range(self.model().rowCount()):
@@ -68,6 +68,7 @@ class ImageViewer(QListView):
 
         msg_box.exec_()
     def load_images_from_folder(self,path):
+        self.model().listdata.clear()
         image_extensions = QImageReader.supportedImageFormats()
         for root, _, files in os.walk(path):
             for file in files:
@@ -85,16 +86,23 @@ class ImageDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         if not index.isValid():
             return
+        painter.save()
+        # Fill the background with the appropriate color
+        painter.fillRect(option.rect, option.palette.base())
+
         pixmap = index.data()
         # Draw the pixmap
         painter.drawPixmap(option.rect.x(), option.rect.y(), pixmap.pixmap)
 
         # Check if the item is selected
         if option.state & QStyle.State_Selected:
-            # Draw a border around the item
+            # Draw a blue border around the image
             pen = QPen(QColor(0, 0, 255), 3, Qt.SolidLine)
             painter.setPen(pen)
             painter.drawRect(option.rect)
+
+        painter.restore()
+
 
     def sizeHint(self, option, index):
         return QSize(thumbnail_size, thumbnail_size)
@@ -122,10 +130,8 @@ class PixmapItem(QStandardItem):
 
 class MyListModel(QAbstractListModel):
     def __init__(self, datain, parent=None, *args):
-        """ datain: a list where each item is a row
-        """
         QAbstractListModel.__init__(self, parent, *args)
-        self.listdata = datain
+        self.listdata : list = datain
 
     def rowCount(self, parent=QModelIndex()):
         return len(self.listdata)
