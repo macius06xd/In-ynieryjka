@@ -3,7 +3,7 @@ import time
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import (QApplication, QFileSystemModel, QTreeView, QSplitter, QMainWindow, QScrollArea, QWidget,
                              QVBoxLayout, QListView, QAbstractItemView, QAbstractItemDelegate, QLabel, QMessageBox,
-                             QStyle, QListWidget, QStyledItemDelegate)
+                             QStyle, QListWidget, QStyledItemDelegate, QDialog)
 from PyQt5.QtGui import QPixmap, QImageReader, QStandardItemModel, QStandardItem, QPen, QIcon, QColor, QDrag, QCursor, \
     QPainter
 from PyQt5.QtCore import Qt, QDir, QSize, QEvent, pyqtSignal, QThread, QObject, QRunnable, QThreadPool, QMutex, \
@@ -64,16 +64,31 @@ class ImageViewer(QListView):
         pixmap = QPixmap(filename)
         image_label.setPixmap(pixmap)
 
-        # create a message box and set its layout
-        msg_box = QMessageBox(self)
-        msg_box.setWindowTitle("Image Viewer")
-        msg_box.setText("")
+        # create a dialog and set its layout
+        dialog = QDialog(self, flags=Qt.WindowFlags(Qt.Popup))
+        dialog.setWindowTitle("Image Viewer")
+        dialog.setModal(False)
+        dialog.setAttribute(Qt.WA_DeleteOnClose, True)  # make the dialog close when it loses focus
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(image_label, 0, Qt.AlignHCenter | Qt.AlignVCenter)
 
-        layout = msg_box.layout()
-        layout.addWidget(image_label, 0, 0, Qt.AlignHCenter | Qt.AlignVCenter)
+        # set the dialog to close when it loses focus
+        def onFocusOutEvent(self, event):
+            # The QDialog lost focus
+            print("QDialog lost focus")
+            event.accept()
 
-        msg_box.exec_()
+        dialog.focusOutEvent = onFocusOutEvent
 
+        # override the eventFilter method to detect mouse press events outside the dialog
+        def eventFilter(self, obj, event):
+            if event.type() == QEvent.MouseButtonPress and obj is not dialog:
+                dialog.close()
+            return super().eventFilter(obj, event)
+
+        dialog.installEventFilter(dialog)
+
+        dialog.show()
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton and event.modifiers() == Qt.ControlModifier:
             self.ctrl_pressed = True
