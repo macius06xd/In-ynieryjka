@@ -27,7 +27,7 @@ class FileSystem(QTreeView):
         self.setAllColumnsShowFocus(True)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
-        self.setDragDropMode(QAbstractItemView.InternalMove)
+        self.setDragDropMode(QAbstractItemView.DragDrop)
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.model().rowsAboutToBeRemoved.connect(self.rowsRemoved)
@@ -53,12 +53,10 @@ class FileSystem(QTreeView):
             event.ignore()
 
     def dragMoveEvent(self, event):
-        if event.mimeData().hasFormat("application/x-qabstractitemmodeldatalist"):
-            event.accept()
-        else:
-            event.ignore()
+        event.acceptProposedAction()
 
     def dropEvent(self, event):
+        event.setDropAction(Qt.MoveAction)
         data = event.mimeData().data("application/x-qabstractitemmodeldatalist")
         stream = QDataStream(data, QIODevice.ReadOnly)
         row = self.indexAt(event.pos())
@@ -170,7 +168,7 @@ class FileSystemModel(QAbstractItemModel):
         return self.createIndex(parent_node.row(), 0, parent_node)
 
     def supportedDropActions(self):
-        return Qt.MoveAction
+        return  Qt.MoveAction | Qt.CopyAction
 
     def flags(self, index):
         default_flags = super().flags(index)
