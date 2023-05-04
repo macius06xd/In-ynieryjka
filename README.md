@@ -21,9 +21,7 @@ więc w sumie to działa przenoszenie u góry ale nie do końca a przenoszenie m
 
   04.05.2023 19:52
 wyodrebnione zmienne ścieżek dla folderów oraz stała rozmiaru zdjecia po resizingu do Configuration.py
-
 usuniete test.py i CreateSmall.py a small.py zmienione na CreateResizedDataset
-
 dodane Options gdzie uzytkownik moze uruchomic CreateResizedDataset
 
 
