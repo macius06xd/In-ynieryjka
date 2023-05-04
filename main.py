@@ -60,12 +60,13 @@ class ImageBrowser(QMainWindow):
     def create_resized_dataset(self):
         input_folder = DEFAULT_IMAGES_PATH
         output_folder = RESIZED_IMAGES_PATH
-        max_threads = 5
+        max_threads = 12
         self.thread = QThread()
         # Instantiate the ImageResizeThreadPool class
         self.resize_threadpool = ImageResizeThreadPool(input_folder, output_folder, max_threads)
         self.resize_threadpool.moveToThread(self.thread)
         self.thread.started.connect(self.resize_threadpool.run)
+
         # Show progress dialog
         progress_dialog = QProgressDialog("Resizing images...", "Cancel", 0, 100, self)
         progress_dialog.setWindowModality(Qt.WindowModal)
@@ -75,6 +76,12 @@ class ImageBrowser(QMainWindow):
         progress_dialog.setAutoReset(True)
         progress_dialog.setWindowTitle("Progress")
         progress_dialog.show()
+        def workerfinishedhandler():
+            self.dir_tree.populate()
+            progress_dialog.close()
+        self.resize_threadpool.finished.connect(
+            workerfinishedhandler
+        )
         self.resize_threadpool.progress_update.connect(progress_dialog.setValue)
         self.thread.start()
 

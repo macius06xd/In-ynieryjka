@@ -39,6 +39,8 @@ class FileSystem(QTreeView):
         self.setLayout(layout)
     def changed(self):
         print("elo")
+    def populate(self):
+        self.model().populate()
 
     def showContextMenu(self, point):
         index = self.indexAt(point)
