@@ -3,11 +3,15 @@ import cv2
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from Configuration import DEFAULT_IMAGES_PATH
+from Configuration import RESIZED_IMAGES_PATH
+from Configuration import RESIZED_IMAGES_SIZE
+
 
 def resize_image(input_path, output_path):
     try:
         img = cv2.imread(input_path)
-        resized_img = cv2.resize(img, (64, 64), interpolation=cv2.INTER_AREA)
+        resized_img = cv2.resize(img, (RESIZED_IMAGES_SIZE, RESIZED_IMAGES_SIZE), interpolation=cv2.INTER_AREA)
         cv2.imwrite(output_path, resized_img)
     except Exception as e:
         print(f"Error processing file: {input_path}")
@@ -27,8 +31,7 @@ def create_new_folder_and_resize_images(input_folder, output_folder):
                 executor.submit(resize_image, input_path, output_path)
 
 
-if __name__ == "__main__":
-    input_folder = "C:/Users/wojte/OneDrive/Pulpit/klockilego/klocki"
-    output_folder = "C:/Users/wojte/OneDrive/Pulpit/klockilego/klockismall"
-
+def create_resized_dataset():
+    input_folder = DEFAULT_IMAGES_PATH
+    output_folder = RESIZED_IMAGES_PATH
     create_new_folder_and_resize_images(input_folder, output_folder)

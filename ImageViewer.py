@@ -10,7 +10,9 @@ from PyQt5.QtCore import Qt, QDir, QSize, QEvent, pyqtSignal, QThread, QObject, 
     QModelIndex, QAbstractListModel, QMimeData, QByteArray, QDataStream, QIODevice, QPoint, QItemSelectionModel, \
     QVariant
 
-thumbnail_size = 64
+from Configuration import RESIZED_IMAGES_SIZE
+
+thumbnail_size = RESIZED_IMAGES_SIZE
 import sys
 import os
 
@@ -123,6 +125,7 @@ class ImageViewer(QListView):
             paths = mime_data.text().split('\n')
             self.add_to_model(paths)
         event.acceptProposedAction()
+
     def load_images_from_folder(self,dir):
         print("Loading")
         self.active_directory = dir
@@ -148,8 +151,10 @@ class ImageViewer(QListView):
         for result in results:
             self.model().listdata.append(PixmapItem(QPixmap(result), result))
         self.model().layoutChanged.emit()
+
     def recive_notification_from_FileSystem(self,dir):
             self.load_images_from_folder(dir)
+
     def remove_from_model(self,data):
         path = data.path
         item = PixmapItem(QPixmap((path)),path)
@@ -159,6 +164,7 @@ class ImageViewer(QListView):
                 del self.model().listdata[i]
             i = i + 1
         self.model().layoutChanged.emit()
+        
 class ImageDelegate(QStyledItemDelegate):
     imageClicked = pyqtSignal(str)
 

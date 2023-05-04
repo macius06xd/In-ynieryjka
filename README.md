@@ -19,3 +19,13 @@ da się przenosić pliki między folderami
 da sie przenosić foldery ale tak że się wszystko psuje bo się dzieci nie kopiują :) (łatwo to jest naprawić ale zapomniałem o tym)
 więc w sumie to działa przenoszenie u góry ale nie do końca a przenoszenie między widgetami i w widgecie na dole nie działa więc w sumie nic nie działa ale wiem już jak to działa
 
+  04.05.2023 19:52
+wyodrebnione zmienne ścieżek dla folderów oraz stała rozmiaru zdjecia po resizingu do Configuration.py
+usuniete test.py i CreateSmall.py a small.py zmienione na CreateResizedDataset
+dodane Options gdzie uzytkownik moze uruchomic CreateResizedDataset
+
+
+//Do naprawienia
+po uruchomieniu CreateResizedDataset trzeba na razie recznie zrestartowac aplikacje żeby pokazało nową zawartość folderu
+
+

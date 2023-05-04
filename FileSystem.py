@@ -5,6 +5,7 @@ from typing import List, Iterable
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, QDataStream, QIODevice, QMimeData, QByteArray
 from os import scandir
+from Configuration import RESIZED_IMAGES_PATH
 
 from PyQt5.QtWidgets import QTreeView, QWidget, QVBoxLayout, QMenu, QAbstractItemView
 
@@ -140,7 +141,7 @@ class FileSystemNode:
 class FileSystemModel(QAbstractItemModel):
     def __init__(self):
         super().__init__()
-        self.root_node = FileSystemNode("/", r"C:\Users\wojte\OneDrive\Pulpit\klockilego\klockismall")
+        self.root_node = FileSystemNode("/", RESIZED_IMAGES_PATH)
         self.mime_type = "application/x-qabstractitemmodeldatalist"
 
     def index(self, row, column, parent=QModelIndex()):
