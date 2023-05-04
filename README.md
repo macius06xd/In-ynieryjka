@@ -25,7 +25,7 @@ usuniete test.py i CreateSmall.py a small.py zmienione na CreateResizedDataset\
 dodane Options gdzie uzytkownik moze uruchomic CreateResizedDataset
 
 
-//Do naprawienia
+//Do naprawienia\
 po uruchomieniu CreateResizedDataset trzeba na razie recznie zrestartowac aplikacje żeby pokazało nową zawartość folderu
 
 
