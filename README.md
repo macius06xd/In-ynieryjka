@@ -24,8 +24,7 @@ wyodrebnione zmienne ścieżek dla folderów oraz stała rozmiaru zdjecia po res
 usuniete test.py i CreateSmall.py a small.py zmienione na CreateResizedDataset\
 dodane Options gdzie uzytkownik moze uruchomic CreateResizedDataset
 
-
-//Do naprawienia\
-po uruchomieniu CreateResizedDataset trzeba na razie recznie zrestartowac aplikacje żeby pokazało nową zawartość folderu
+  05.05.2023 01:52\
+ zmieniłem troche twój kod dodałem tam multi threading i progress widoczny fileSystem się odświeża
 
 
