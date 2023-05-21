@@ -2,7 +2,7 @@ import sys
 import os
 from PyQt5.QtWidgets import (QApplication, QFileSystemModel, QTreeView, QSplitter, QMainWindow, QScrollArea, QWidget,
                              QVBoxLayout, QListView, QAbstractItemView, QDesktopWidget, QMenuBar, QMenu, QAction,
-                             QProgressDialog)
+                             QProgressDialog, QSlider, QLabel)
 from PyQt5.QtGui import QPixmap, QImageReader, QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt, QDir, QSize, QEvent, pyqtSignal, QThread
 
@@ -41,8 +41,16 @@ class ImageBrowser(QMainWindow):
         self.splitter.addWidget(self.dir_tree)
 
         self.splitter.addWidget(self.image_list)
-
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setMinimum(0)
+        self.slider.setMaximum(10)
+        self.sliderlabel = QLabel()
+        main_layout.setAlignment(Qt.AlignHCenter)
+        self.slider.sliderReleased.connect(lambda : self.sliderValueChanged(self.slider.value()))
+        self.slider.sliderReleased.connect(lambda : self.image_list.slider_changed(self.slider.value()))
         main_layout.addWidget(self.splitter)
+        main_layout.addWidget(self.sliderlabel)
+        main_layout.addWidget(self.slider)
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
 
@@ -56,7 +64,10 @@ class ImageBrowser(QMainWindow):
         menu_bar.addMenu(options_menu)
 
         self.setMenuBar(menu_bar)
+        self.showFullScreen()
 
+    def sliderValueChanged(self, value):
+        self.sliderlabel.setText(f"Clusters: {value}")
     def create_resized_dataset(self):
         input_folder = DEFAULT_IMAGES_PATH
         output_folder = RESIZED_IMAGES_PATH

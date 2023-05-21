@@ -1,4 +1,6 @@
+import string
 import time
+from array import array
 
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import (QApplication, QFileSystemModel, QTreeView, QSplitter, QMainWindow, QScrollArea, QWidget,
@@ -10,11 +12,31 @@ from PyQt5.QtCore import Qt, QDir, QSize, QEvent, pyqtSignal, QThread, QObject, 
     QModelIndex, QAbstractListModel, QMimeData, QByteArray, QDataStream, QIODevice, QPoint, QItemSelectionModel, \
     QVariant
 
+import Configuration
 from Configuration import RESIZED_IMAGES_SIZE
 
 thumbnail_size = RESIZED_IMAGES_SIZE
 import sys
 import os
+
+
+class ImageLoader(QThread):
+    image_loaded = pyqtSignal(object)
+
+    def __init__(self, file_list):
+        super().__init__()
+        self.file_list = file_list
+
+    def run(self):
+        image_extensions = QImageReader.supportedImageFormats()
+        for file in self.file_list:
+            path = file.path
+            if path.split('.')[-1].encode() in image_extensions:
+                pixmap = QPixmap(path)
+                item = PixmapItem(pixmap, path)
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                self.image_loaded.emit(item)
+
 
 class ImageViewer(QListView):
     def __init__(self):
@@ -41,6 +63,15 @@ class ImageViewer(QListView):
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.selected_items = []
+        self.image_loader_thread = None
+
+    def slider_changed(self, value):
+        # Todo
+        from Clusterization import Cluster
+        cos = Cluster(self.model().listdata,value)
+        self.model().listdata = sorted(self.model().listdata,key = lambda x:x.cluster)
+        self.model().layoutChanged.emit()
+
 
     def manage_selection(self, selected, deselected):
         selected_indexes = selected
@@ -48,7 +79,7 @@ class ImageViewer(QListView):
         self.ctrl_pressed = False
         self.viewport().update()
 
-    def onImageClicked(self, imagePath):
+    def onImageClicked(self, imagePath: string):
         for row in range(self.model().rowCount()):
             index = self.model().index(row, 0)
             if index.data(Qt.UserRole) == imagePath:
@@ -58,16 +89,14 @@ class ImageViewer(QListView):
         # create a label widget to display the image
         image_label = QLabel()
         # Example filename
-        filename = imagePath
-        filename = filename.replace("_small", "")
-        filename = filename.replace("small", "")
-        pixmap = QPixmap(filename)
-        image_label.setPixmap(pixmap)
+        filename = Configuration.DEFAULT_IMAGES_PATH + "\\" + os.path.basename(imagePath.replace("_small", ""));
+        image_label.setPixmap(QPixmap(filename).scaled(1080, 720, Qt.IgnoreAspectRatio))
 
         # create a dialog and set its layout
         dialog = QDialog(self, flags=Qt.WindowFlags(Qt.Popup))
         dialog.setWindowTitle("Image Viewer")
         dialog.setModal(False)
+        dialog.setMaximumSize(1080, 720)
         dialog.setAttribute(Qt.WA_DeleteOnClose, True)  # make the dialog close when it loses focus
         layout = QVBoxLayout(dialog)
         layout.addWidget(image_label, 0, Qt.AlignHCenter | Qt.AlignVCenter)
@@ -89,6 +118,7 @@ class ImageViewer(QListView):
         dialog.installEventFilter(dialog)
 
         dialog.show()
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton and event.modifiers() == Qt.ControlModifier:
             self.ctrl_pressed = True
@@ -141,54 +171,63 @@ class ImageViewer(QListView):
             self.add_to_model(paths)
         event.acceptProposedAction()
 
-    def load_images_from_folder(self,dir):
-        print("Loading")
-        self.active_directory = dir
-        self.model().listdata.clear()
+    def load_images_from_folder(self, dir):
         image_extensions = QImageReader.supportedImageFormats()
         for file in dir.data(Qt.UserRole).children:
             path = file.path
-            if  path.split('.')[-1].encode() in image_extensions:
-                item = PixmapItem(QPixmap(path), path)
+            if path.split('.')[-1].encode() in image_extensions:
+                pixmap = QPixmap(path)
+                item = PixmapItem(pixmap, path)
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                self.results.append(item)
                 self.model().listdata.append(item)
-                self.model().layoutChanged.emit()
-                self.selectionModel().clearSelection()
+        self.model().layoutChanged.emit()
 
-    def add_to_model(self,data):
+    def add_image(self, item):
+        self.model().listdata.append(item)
+
+    def add_to_model(self, data):
         results = []
 
         # iterate over paths and check if there is a matching item
         for path in data:
-            if not any(item.path == path for item in  self.model().listdata):
+            if not any(item.path == path for item in self.model().listdata):
                 results.append(path)
         for result in results:
             self.model().listdata.append(PixmapItem(QPixmap(result), result))
         self.model().layoutChanged.emit()
 
-    def recive_notification_from_FileSystem(self,dir):
-            self.load_images_from_folder(dir)
+    def recive_notification_from_FileSystem(self, dir):
+        self.load_images_from_folder(dir)
 
-    def remove_from_model(self,data):
+    def remove_from_model(self, data):
         path = data.path
-        item = PixmapItem(QPixmap((path)),path)
+        item = PixmapItem(QPixmap((path)), path)
         i = 0
         for item in self.model().listdata:
             if item.get_path() == path:
                 del self.model().listdata[i]
             i = i + 1
         self.model().layoutChanged.emit()
-        
+
+color_mapping = {
+    0: QColor(255, 0, 0),   # Red color for cluster 0
+    1: QColor(0, 255, 0),   # Green color for cluster 1
+    2: QColor(0, 0, 255),   # Blue color for cluster 2
+    # Add more cluster-color mappings as needed
+}
 class ImageDelegate(QStyledItemDelegate):
     imageClicked = pyqtSignal(str)
 
     def paint(self, painter, option, index):
         if not index.isValid():
             return
+        cluster = index.data(Qt.DisplayRole)
         painter.save()
-        # Fill the background with the appropriate color
-        painter.fillRect(option.rect, option.palette.base())
+                # Fill the background with the appropriate color
+        enlarged_rect = option.rect.adjusted(-8, -8, 8, 8)
+        if cluster is not None:
+            color = color_mapping.get(cluster.cluster,QColor(0, 0, 0))  # Default to black if cluster value not found in mapping
+            painter.fillRect(enlarged_rect, color)
 
         pixmap = index.data()
         # Draw the pixmap
@@ -218,30 +257,32 @@ class ImageDelegate(QStyledItemDelegate):
         return QSize(thumbnail_size, thumbnail_size)
 
     def flags(self, index):
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable  | Qt.ItemIsDropEnabled  | Qt.ItemIsDragEnabled
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled | Qt.ItemIsDragEnabled
 
 
 class PixmapItem(QStandardItem):
-    def __init__(self, pixmap,path):
+    def __init__(self, pixmap, path, cluster=None):
         super().__init__()
         self.pixmap = pixmap
         self.path = path
         self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)  # make item selectable
+        self.cluster = cluster
 
     def data(self, role):
         if role == Qt.UserRole:
             return self.get_path()
+        if role == Qt.DisplayRole:
+            return self.cluster
         return self.pixmap
+
     def get_path(self):
         return self.path
-
-
 
 
 class MyListModel(QAbstractListModel):
     def __init__(self, datain, parent=None, *args):
         QAbstractListModel.__init__(self, parent, *args)
-        self.listdata : list = datain
+        self.listdata: array = datain
         self.mime_type = "application/x-qabstractitemmodeldatalist"
 
     def rowCount(self, parent=QModelIndex()):
@@ -252,7 +293,8 @@ class MyListModel(QAbstractListModel):
             return self.listdata[index.row()]
         else:
             return QVariant()
-    def itemFromIndex(self,index):
+
+    def itemFromIndex(self, index):
         return self.listdata[index.row()]
 
     def indexFromItem(self, item):
@@ -267,6 +309,7 @@ class MyListModel(QAbstractListModel):
 
     def mimeTypes(self):
         return [self.mime_type]
+
     def mimeData(self, indexes):
         mime_data = QMimeData()
         encoded_data = QByteArray()

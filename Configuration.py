@@ -7,9 +7,10 @@
 #DEFAULT_IMAGES_PATH = r"C:\Users\logix\Desktop\default"
 #RESIZED_IMAGES_PATH  = r"C:\Users\logix\Desktop\smol"
 
-DEFAULT_IMAGES_PATH = r"C:/Users/wojte/OneDrive/Pulpit/klockilego/klocki/"
-RESIZED_IMAGES_PATH = r"C:/Users/wojte/OneDrive/Pulpit/klockilego/klockismall"
+DEFAULT_IMAGES_PATH = r"C:\Users\wojte\OneDrive\Pulpit\klocki"
+RESIZED_IMAGES_PATH = r"C:\Users\wojte\OneDrive\Pulpit\small"
+VECTORS_PATH = r"C:\Users\wojte\OneDrive\Pulpit\xception.hdf"
 
 #Size of images in pixels after resizing
-RESIZED_IMAGES_SIZE = 32
+RESIZED_IMAGES_SIZE = 64
 

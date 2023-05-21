@@ -33,7 +33,6 @@ class FileSystem(QTreeView):
         self.setAcceptDrops(True)
         self.model().rowsAboutToBeRemoved.connect(self.rowsRemoved)
         self.model().layoutChanged.connect(self.changed)
-
         layout = QVBoxLayout(self)
         layout.addWidget(self)
         self.setLayout(layout)
@@ -120,6 +119,7 @@ class FileSystemNode:
         self.path = path
         self.parent = parent
         self.children = []
+        self.cluster = False
 
     def add_child(self, child):
         if isinstance(child, Iterable):
