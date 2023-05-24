@@ -1,5 +1,6 @@
 import os
 import cv2
+import numpy as np
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QThread, pyqtSlot  , Qt
 from PyQt5.QtWidgets import QApplication
 
@@ -22,9 +23,39 @@ class ImageResizeWorker(QRunnable):
     def run(self):
         try:
 
+            # Read the original image
             img = cv2.imread(self.input_path)
-            resized_img = cv2.resize(img, (RESIZED_IMAGES_SIZE, RESIZED_IMAGES_SIZE), interpolation=cv2.INTER_AREA)
-            cv2.imwrite(self.output_path, resized_img)
+
+            # Calculate the aspect ratio of the original image
+            original_height, original_width, _ = img.shape
+            aspect_ratio = original_width / original_height
+
+            # Calculate the target width and height for resizing
+            if aspect_ratio > 1:
+                target_width = RESIZED_IMAGES_SIZE
+                target_height = int(RESIZED_IMAGES_SIZE / aspect_ratio)
+            else:
+                target_width = int(RESIZED_IMAGES_SIZE * aspect_ratio)
+                target_height = RESIZED_IMAGES_SIZE
+
+            # Resize the image while preserving the aspect ratio
+            resized_img = cv2.resize(img, (target_width, target_height), interpolation=cv2.INTER_AREA)
+
+            # Create a new canvas with the square dimensions
+            canvas_size = max(target_width, target_height)
+            canvas = np.zeros((canvas_size, canvas_size, 3), dtype=np.uint8)
+
+            # Calculate the padding sizes
+            pad_top = (canvas_size - target_height) // 2
+            pad_bottom = canvas_size - target_height - pad_top
+            pad_left = (canvas_size - target_width) // 2
+            pad_right = canvas_size - target_width - pad_left
+
+            # Add padding to the image
+            padded_img = cv2.copyMakeBorder(resized_img, pad_top, pad_bottom, pad_left, pad_right, cv2.BORDER_CONSTANT)
+
+            # Now, the padded_img is the resized and padded image within the square dimensions
+            cv2.imwrite(self.output_path, padded_img)
         except Exception as e:
             print(f"Error processing file: {self.input_path}")
             print(f"Error message: {e}")

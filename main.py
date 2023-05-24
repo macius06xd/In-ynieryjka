@@ -59,7 +59,7 @@ class ImageBrowser(QMainWindow):
         options_menu = QMenu("&Options", self)
         create_resized_action = QAction("Create resized dataset", self)
         create_resized_action.triggered.connect(self.create_resized_dataset)
-
+        self.image_list.node_changed_signal.connect(self.dir_tree.on_cluster)
         options_menu.addAction(create_resized_action)
         menu_bar.addMenu(options_menu)
 

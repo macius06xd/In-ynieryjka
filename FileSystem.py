@@ -3,7 +3,7 @@ import shutil
 from typing import List, Iterable
 
 from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, QDataStream, QIODevice, QMimeData, QByteArray
+from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal
 from os import scandir
 from Configuration import RESIZED_IMAGES_PATH
 
@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QTreeView, QWidget, QVBoxLayout, QMenu, QAbstractIte
 
 
 class FileSystem(QTreeView):
-    def __init__(self,image_viewer, parent=None):
+    def __init__(self, image_viewer, parent=None):
         super().__init__(parent)
         self.image_viewer = image_viewer
         self.clicked.connect(self.on_tree_clicked)
@@ -36,8 +36,10 @@ class FileSystem(QTreeView):
         layout = QVBoxLayout(self)
         layout.addWidget(self)
         self.setLayout(layout)
+
     def changed(self):
         print("elo")
+
     def populate(self):
         self.model().populate()
 
@@ -89,14 +91,11 @@ class FileSystem(QTreeView):
 
         event.accept()
 
-
-
-
     def rowsInserted(self, parent: QModelIndex, first: int, last: int) -> None:
         print("dodaje")
         dir = self.image_viewer.active_directory
         if parent == dir:
-            list = [child.path for child in parent.data(Qt.UserRole).children[first-1:last+1]]
+            list = [child.path for child in parent.data(Qt.UserRole).children[first - 1:last + 1]]
             self.image_viewer.add_to_model(list)
 
     def rowsRemoved(self, parent: QModelIndex, first: int, last: int) -> None:
@@ -105,16 +104,38 @@ class FileSystem(QTreeView):
         if parent == dir:
             self.image_viewer.remove_from_model(parent.data(Qt.UserRole).children[first])
 
-
     def on_tree_clicked(self, index):
         if len(index.data(Qt.UserRole).children) != 0:
-         self.image_viewer.load_images_from_folder(index)
+            self.image_viewer.load_images_from_folder(index)
 
+
+    def on_cluster(self,items:list,dir_name,cluster_number):
+        print(dir_name)
+        map = {}
+        node = self.model().get_node_by_name(dir_name)
+        if node is not None:
+            node.children.clear()
+            for i in range(0,cluster_number):
+                cluster_node = FileSystemNode(str(i),"",node,True)
+                map[i] = cluster_node
+                node.add_child(cluster_node)
+        clusters = [[] for _ in range(cluster_number+1)]  # Create k empty lists to hold the items
+        for item in items:
+            cluster = item.cluster
+            if cluster is not None and 0 <= cluster < cluster_number:
+                name = os.path.basename(item.path.replace("_small", ""));
+                clusters[cluster].append(FileSystemNode(name,item.path,map[item.cluster],False))
+        for i in range(0, cluster_number):
+            map[i].add_child(clusters[i])
+        self.model().layoutChanged.emit()
+        pass
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
 from os import scandir, rename
 
+
 class FileSystemNode:
-    def __init__(self, name, path, parent=None):
+
+    def __init__(self, name, path, parent=None,cluster=None):
         self.name = name
         self.path = path
         self.parent = parent
@@ -130,15 +151,17 @@ class FileSystemNode:
 
     def child(self, row):
         if row >= len(self.children):
-            return self.children[len(self.children)-1]
+            return self.children[len(self.children) - 1]
         return self.children[row]
 
     def row(self):
         if self.parent:
             return self.parent.children.index(self)
         return 0
-    def remove_child(self , child):
+
+    def remove_child(self, child):
         self.children.remove(child)
+
 
 class FileSystemModel(QAbstractItemModel):
     def __init__(self):
@@ -171,7 +194,7 @@ class FileSystemModel(QAbstractItemModel):
         return self.createIndex(parent_node.row(), 0, parent_node)
 
     def supportedDropActions(self):
-        return  Qt.MoveAction | Qt.CopyAction
+        return Qt.MoveAction | Qt.CopyAction
 
     def flags(self, index):
         default_flags = super().flags(index)
@@ -283,3 +306,21 @@ class FileSystemModel(QAbstractItemModel):
             else:
                 child_node = FileSystemNode(child_entry.name, child_entry.path, parent_node)
                 parent_node.add_child(child_node)
+
+    def get_node_by_name(self, name):
+        return self.get_node_recursively(self.root_node, name)
+
+    def get_node_recursively(self, parent_node, name):
+        if parent_node.name == name:
+            return parent_node
+
+        for child_node in parent_node.children:
+            if child_node.name == name:
+                return child_node
+
+            if child_node.children:
+                node = self.get_node_recursively(child_node, name)
+                if node:
+                    return node
+
+        return None

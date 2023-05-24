@@ -39,6 +39,7 @@ class ImageLoader(QThread):
 
 
 class ImageViewer(QListView):
+    node_changed_signal = pyqtSignal(list, str, int)
     def __init__(self):
         super().__init__()
         self.files = None
@@ -64,6 +65,7 @@ class ImageViewer(QListView):
         self.setAcceptDrops(True)
         self.selected_items = []
         self.image_loader_thread = None
+        self.dir = None
 
     def slider_changed(self, value):
         # Todo
@@ -71,6 +73,7 @@ class ImageViewer(QListView):
         cos = Cluster(self.model().listdata,value)
         self.model().listdata = sorted(self.model().listdata,key = lambda x:x.cluster)
         self.model().layoutChanged.emit()
+        self.node_changed_signal.emit(self.model().listdata,self.dir,value)
 
 
     def manage_selection(self, selected, deselected):
@@ -90,6 +93,7 @@ class ImageViewer(QListView):
         image_label = QLabel()
         # Example filename
         filename = Configuration.DEFAULT_IMAGES_PATH + "\\" + os.path.basename(imagePath.replace("_small", ""));
+        print(filename)
         image_label.setPixmap(QPixmap(filename).scaled(1080, 720, Qt.IgnoreAspectRatio))
 
         # create a dialog and set its layout
@@ -172,6 +176,7 @@ class ImageViewer(QListView):
         event.acceptProposedAction()
 
     def load_images_from_folder(self, dir):
+        self.dir = dir.data(Qt.UserRole).name
         image_extensions = QImageReader.supportedImageFormats()
         for file in dir.data(Qt.UserRole).children:
             path = file.path
