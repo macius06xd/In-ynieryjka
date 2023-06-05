@@ -98,7 +98,6 @@ class ImageBrowser(QMainWindow):
         progress_dialog.setAutoReset(True)
         progress_dialog.setWindowTitle("Progress")
         progress_dialog.show()
-        W
         def workerfinishedhandler():
             self.dir_tree.populate()
             progress_dialog.close()
