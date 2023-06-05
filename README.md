@@ -21,8 +21,13 @@ te scieżki powinny wskazywać na to samo
 
 4. RESIZED_IMAGES_PATH - pusty folder, tutaj wlecą sformatowane zdjęcia z 2./3.
 
+![image](https://github.com/macius06xd/In-ynieryjka/assets/80836050/d02f708d-b9ab-4506-8462-c41357222486)
+
 Odpalasz maina, wybierasz z Options "Perform initial clusterization" i wskakują nowo stworzone foldery. teraz robisz
 create resized dataset i tutaj program się wywala. jesli się nie mylę to dlatego, że w xception.hdf są nazwy folderów typu 4312 i to na podstawie tej struktury CreateResizedDataset (i pewnie tak samo ta klasteryzacja odpalane tym sliderem) szuka zdjęć. Ale chyba docelowo plik z wektorem cech nie będzie tak uporządkowany tylko będzie w nim po prostu iles tam zdjęc bezpośrednio(???)
 
-InitialClusterization szuka odpowiedniego wektoru cech na podstawie nazwy zdjecia przeszukując podfoldery z xception, to pewnie docelowo tez do zmiany czyli nie bedzie musialo szukac w podfolderach
+InitialClusterization szuka odpowiedniego wektoru cech na podstawie nazwy zdjecia przeszukując podfoldery z xception, to pewnie docelowo tez do zmiany czyli nie bedzie musialo szukac w podfolderach,
+
+
+
 
