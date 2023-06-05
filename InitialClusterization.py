@@ -21,13 +21,13 @@ def perform_clustering(images_folder, vectors_path, clusterized_folder, n_cluste
 
     feature_vectors = load_feature_vectors(vectors_path, image_files)
 
-    kmeans = KMeans(n_clusters=n_clusters)  # adjust the number of clusters here
+    kmeans = KMeans(n_clusters=n_clusters)
     kmeans.fit(feature_vectors)
 
     labels = kmeans.labels_
 
     for img, label in zip(image_files, labels):
-        dest_folder = os.path.join(clusterized_folder, str(label))
+        dest_folder = os.path.join(clusterized_folder, f'Cluster_{label}')  # change here
         os.makedirs(dest_folder, exist_ok=True)
         shutil.copy(os.path.join(images_folder, img), os.path.join(dest_folder, img))
 
