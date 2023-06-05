@@ -24,7 +24,7 @@ te scieżki powinny wskazywać na to samo
 ![image](https://github.com/macius06xd/In-ynieryjka/assets/80836050/d02f708d-b9ab-4506-8462-c41357222486)
 
 Odpalasz maina, wybierasz z Options "Perform initial clusterization" i wskakują nowo stworzone foldery. teraz robisz
-create resized dataset i tutaj program się wywala. jesli się nie mylę to dlatego, że w xception.hdf są nazwy folderów typu 4312 i to na podstawie tej struktury CreateResizedDataset (i pewnie tak samo ta klasteryzacja odpalane tym sliderem) szuka zdjęć. Ale chyba docelowo plik z wektorem cech nie będzie tak uporządkowany tylko będzie w nim po prostu iles tam zdjęc bezpośrednio(???)
+create resized dataset i tutaj program się wywala. jesli się nie mylę to dlatego, że w folderach ktore nam dał jest jeden poziom folderów wiecej i CreateResizedDataset to uwzglednia (i pewnie tak samo ta klasteryzacja odpalane tym sliderem) (???). Ale chyba docelowo plik z wektorem cech nie będzie tak uporządkowany tylko będzie w nim po prostu iles tam zdjęc bezpośrednio(???)
 
 InitialClusterization szuka odpowiedniego wektoru cech na podstawie nazwy zdjecia przeszukując podfoldery z xception, to pewnie docelowo tez do zmiany czyli nie bedzie musialo szukac w podfolderach,
 
