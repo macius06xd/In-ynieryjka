@@ -37,7 +37,6 @@ class ImageLoader(QThread):
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.image_loaded.emit(item)
 
-
 class ImageViewer(QListView):
     node_changed_signal = pyqtSignal(list, str, int)
     def __init__(self):
@@ -48,13 +47,11 @@ class ImageViewer(QListView):
         self.setResizeMode(QListView.Adjust)
         model = MyListModel(list())
         self.setModel(model)
-        self.setGridSize(QSize(thumbnail_size + 16, thumbnail_size + 16))
         self.setSpacing(10)
         self.results = []
         self.setDragEnabled(True)
         self.acceptDrops()
         self.setWordWrap(True)
-        self.setUniformItemSizes(True)
         self.setSelectionMode(QAbstractItemView.ContiguousSelection)
         self.setItemDelegate(ImageDelegate())
         self.selectionModel().selectionChanged.connect(self.manage_selection)
@@ -66,11 +63,14 @@ class ImageViewer(QListView):
         self.selected_items = []
         self.image_loader_thread = None
         self.dir = None
+        self.cluster = None
 
     def slider_changed(self, value):
         # Todo
         from Clusterization import Cluster
-        cos = Cluster(self.model().listdata,value)
+        if self.cluster is None:
+            self.cluster = Cluster(self.model().listdata,value)
+        self.cluster.set_clusters(value,self.model().listdata)
         self.model().listdata = sorted(self.model().listdata,key = lambda x:x.cluster)
         self.model().layoutChanged.emit()
         self.node_changed_signal.emit(self.model().listdata,self.dir,value)
@@ -259,7 +259,10 @@ class ImageDelegate(QStyledItemDelegate):
         return super().editorEvent(event, model, option, index)
 
     def sizeHint(self, option, index):
-        return QSize(thumbnail_size, thumbnail_size)
+        pixmapitem = index.data()
+        pixmap_width = pixmapitem.pixmap.width()
+        pixmap_height = pixmapitem.pixmap.height()
+        return QSize(pixmap_width, pixmap_height)
 
     def flags(self, index):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled | Qt.ItemIsDragEnabled

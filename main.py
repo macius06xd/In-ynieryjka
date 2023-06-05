@@ -10,7 +10,7 @@ from CreateResizedDataset import ImageResizeThreadPool
 from FileSystem import FileSystem
 from ImageViewer import ImageViewer
 from Configuration import *
-from InitialClusterization import perform_clustering 
+from InitialClusterization import  ClusteringThread
 
 thumbnail_size = RESIZED_IMAGES_SIZE
 
@@ -24,6 +24,7 @@ class CustomFileSystemModel(QFileSystemModel):
 class ImageBrowser(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.thread = None
         self.initUI()
 
     def initUI(self):
@@ -80,7 +81,7 @@ class ImageBrowser(QMainWindow):
         self.sliderlabel.setText(f"Clusters: {value}")
 
     def create_resized_dataset(self):
-        input_folder = DEFAULT_IMAGES_PATH
+        input_folder = INITIAL_CLUSTERIZED_FOLDER
         output_folder = RESIZED_IMAGES_PATH
         max_threads = 12
         self.thread = QThread()
@@ -113,7 +114,18 @@ class ImageBrowser(QMainWindow):
             self.perform_initial_clusterization(cluster_count)
 
     def perform_initial_clusterization(self, no_of_clusters):
-        perform_clustering(INITIAL_IMAGES_FOLDER, VECTORS_PATH, INITIAL_CLUSTERIZED_FOLDER, no_of_clusters)
+        progress_dialog = QProgressDialog("Clustering and moving images", "Cancel", 0, 100, self)
+        progress_dialog.setWindowModality(Qt.WindowModal)
+        progress_dialog.setAutoClose(True)
+        progress_dialog.setMinimum(0)
+        progress_dialog.setMaximum(100)
+        progress_dialog.setAutoReset(True)
+        progress_dialog.setWindowTitle("Progress")
+        progress_dialog.show()
+
+        self.thread = ClusteringThread(INITIAL_IMAGES_FOLDER, VECTORS_PATH, INITIAL_CLUSTERIZED_FOLDER, no_of_clusters)
+        self.thread.progress_updated.connect(progress_dialog.setValue)
+        self.thread.start()
 
 
 
