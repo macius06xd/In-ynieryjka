@@ -39,15 +39,12 @@ class FileSystem(QTreeView):
         layout.addWidget(self)
         self.setLayout(layout)
     def on_deleted(self,filename):
-        node : FileSystemNode = self.current_index.data(Qt.UserRole)
         file_path = None
         child_node = None
-        for child in node.children:
-            if child.name == filename:
-                child_node = child
-                file_path = child.path
-                node.children.remove(child)
-                break
+        child_node = self.model().get_node_by_name(filename)
+        node = child_node.parent
+        file_path = child_node.path
+        node.children.remove(child_node)
         trash_folder = os.path.join(INITIAL_CLUSTERIZED_FOLDER,"thrash")
 
         # Create the trash folder if it doesn't exist
@@ -56,12 +53,9 @@ class FileSystem(QTreeView):
         # Extract the filename from the file path
         filename = os.path.basename(file_path)
 
-        # Extract the path except for the last directory
-        path_except_last = os.path.dirname(file_path)
-
         # Construct the target path in the trash folder
         target_path = os.path.join(trash_folder, filename)
-
+        print(file_path)
         # Move the file to the trash folder
         shutil.move(file_path, target_path)
 
@@ -149,17 +143,18 @@ class FileSystem(QTreeView):
         map = {}
         node = self.model().get_node_by_name(dir_name)
         if node is not None:
-            node.children.clear()
             for i in range(0,cluster_number):
-                cluster_node = FileSystemNode(str(i),"",node,True)
+                cluster_node = FileSystemNode(dir_name+str(i),"",node,True)
                 map[i] = cluster_node
                 node.add_child(cluster_node)
         clusters = [[] for _ in range(cluster_number+1)]  # Create k empty lists to hold the items
         for item in items:
             cluster = item.cluster
             if cluster is not None and 0 <= cluster < cluster_number:
-                name = os.path.basename(item.path.replace("_small", ""));
-                clusters[cluster].append(FileSystemNode(name,item.path,map[item.cluster],False))
+                name = os.path.basename(item.path)
+                node2 =  self.model().get_node_by_name(name)
+                clusters[cluster].append(FileSystemNode(name,node2.path,map[item.cluster],False))
+                node.remove_child(node2)
         for i in range(0, cluster_number):
             map[i].add_child(clusters[i])
         self.model().layoutChanged.emit()

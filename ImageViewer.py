@@ -144,6 +144,7 @@ class ImageViewer(QListView):
         event.acceptProposedAction()
 
     def load_images_from_folder(self, dir):
+        self.model().listdata.clear()
         self.dir = dir.data(Qt.UserRole).name
         image_extensions = QImageReader.supportedImageFormats()
         for file in dir.data(Qt.UserRole).children:
