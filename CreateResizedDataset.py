@@ -68,15 +68,13 @@ class ImageResizeThreadPool (QThread):
         self.files_processed = 0
 
     def run(self):
-
         for subdir, dirs, files in os.walk(self.input_folder):
             for file in files:
                 input_path = os.path.join(subdir, file)
-                output_subdir = subdir.replace(self.input_folder, self.output_folder)
-                output_path = os.path.join(output_subdir, file.replace(".", "_small."))
-                os.makedirs(output_subdir, exist_ok=True)
+                output_path = os.path.join(self.output_folder, file)
+                os.makedirs(self.output_folder, exist_ok=True)
                 worker = ImageResizeWorker(input_path, output_path)
-                worker.signal.mem_signal.connect(self.update_progress,type = Qt.DirectConnection)
+                worker.signal.mem_signal.connect(self.update_progress, type=Qt.DirectConnection)
                 self.thread_pool.start(worker)
         self.thread_pool.waitForDone()
         self.finished.emit()

@@ -68,7 +68,7 @@ class ImageBrowser(QMainWindow):
         initial_clusterization_action.triggered.connect(self.prompt_for_cluster_count)
 
         self.image_list.node_changed_signal.connect(self.dir_tree.on_cluster)
-
+        self.image_list.image_deleted.connect(self.dir_tree.on_deleted)
         options_menu.addAction(create_resized_action)
         options_menu.addAction(initial_clusterization_action)
 

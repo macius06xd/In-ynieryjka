@@ -5,12 +5,13 @@ from typing import List, Iterable
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal
 from os import scandir
-from Configuration import RESIZED_IMAGES_PATH
+from Configuration import RESIZED_IMAGES_PATH, INITIAL_CLUSTERIZED_FOLDER
 
 from PyQt5.QtWidgets import QTreeView, QWidget, QVBoxLayout, QMenu, QAbstractItemView
 
 
 class FileSystem(QTreeView):
+
     def __init__(self, image_viewer, parent=None):
         super().__init__(parent)
         self.image_viewer = image_viewer
@@ -33,9 +34,42 @@ class FileSystem(QTreeView):
         self.setAcceptDrops(True)
         self.model().rowsAboutToBeRemoved.connect(self.rowsRemoved)
         self.model().layoutChanged.connect(self.changed)
+        self.current_index = None
         layout = QVBoxLayout(self)
         layout.addWidget(self)
         self.setLayout(layout)
+    def on_deleted(self,filename):
+        node : FileSystemNode = self.current_index.data(Qt.UserRole)
+        file_path = None
+        child_node = None
+        for child in node.children:
+            if child.name == filename:
+                child_node = child
+                file_path = child.path
+                node.children.remove(child)
+                break
+        trash_folder = os.path.join(INITIAL_CLUSTERIZED_FOLDER,"thrash")
+
+        # Create the trash folder if it doesn't exist
+        os.makedirs(trash_folder, exist_ok=True)
+
+        # Extract the filename from the file path
+        filename = os.path.basename(file_path)
+
+        # Extract the path except for the last directory
+        path_except_last = os.path.dirname(file_path)
+
+        # Construct the target path in the trash folder
+        target_path = os.path.join(trash_folder, filename)
+
+        # Move the file to the trash folder
+        shutil.move(file_path, target_path)
+
+        thrash = self.model().get_node_by_name("thrash")
+
+        child_node.parent = thrash
+        thrash.add_child(child_node)
+        self.model().layoutChanged.emit()
 
     def changed(self):
         print("elo")
@@ -105,6 +139,7 @@ class FileSystem(QTreeView):
             self.image_viewer.remove_from_model(parent.data(Qt.UserRole).children[first])
 
     def on_tree_clicked(self, index):
+        self.current_index = index
         if len(index.data(Qt.UserRole).children) != 0:
             self.image_viewer.load_images_from_folder(index)
 
@@ -166,7 +201,7 @@ class FileSystemNode:
 class FileSystemModel(QAbstractItemModel):
     def __init__(self):
         super().__init__()
-        self.root_node = FileSystemNode("/", RESIZED_IMAGES_PATH)
+        self.root_node = FileSystemNode("/", INITIAL_CLUSTERIZED_FOLDER)
         self.mime_type = "application/x-qabstractitemmodeldatalist"
 
     def index(self, row, column, parent=QModelIndex()):

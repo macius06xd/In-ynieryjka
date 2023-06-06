@@ -22,7 +22,6 @@ import os
 
 class ImageLoader(QThread):
     image_loaded = pyqtSignal(object)
-
     def __init__(self, file_list):
         super().__init__()
         self.file_list = file_list
@@ -30,15 +29,15 @@ class ImageLoader(QThread):
     def run(self):
         image_extensions = QImageReader.supportedImageFormats()
         for file in self.file_list:
-            path = file.path
-            if path.split('.')[-1].encode() in image_extensions:
-                pixmap = QPixmap(path)
-                item = PixmapItem(pixmap, path)
+            file_name = os.path.basename(file.path)
+            if file_name.split('.')[-1].encode() in image_extensions:
+                pixmap = QPixmap(file.path)
+                item = PixmapItem(pixmap, file_name)
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.image_loaded.emit(item)
-
 class ImageViewer(QListView):
     node_changed_signal = pyqtSignal(list, str, int)
+    image_deleted = pyqtSignal(str)
     def __init__(self):
         super().__init__()
         self.files = None
@@ -82,46 +81,15 @@ class ImageViewer(QListView):
         self.ctrl_pressed = False
         self.viewport().update()
 
-    def onImageClicked(self, imagePath: string):
-        for row in range(self.model().rowCount()):
-            index = self.model().index(row, 0)
-            if index.data(Qt.UserRole) == imagePath:
-                self.selectionModel().select(index, QItemSelectionModel.Select)
-                break
+    def onImageClicked(self, imagePath: str):
+        self.model().remove(self.model().getElementByPath(imagePath))
+        # change to signal later
+        self.image_deleted.emit(os.path.basename(imagePath))
+        self.model().layoutChanged.emit()
 
-        # create a label widget to display the image
-        image_label = QLabel()
-        # Example filename
-        filename = Configuration.DEFAULT_IMAGES_PATH + "\\" + os.path.basename(imagePath.replace("_small", ""));
-        print(filename)
-        image_label.setPixmap(QPixmap(filename).scaled(1080, 720, Qt.IgnoreAspectRatio))
 
-        # create a dialog and set its layout
-        dialog = QDialog(self, flags=Qt.WindowFlags(Qt.Popup))
-        dialog.setWindowTitle("Image Viewer")
-        dialog.setModal(False)
-        dialog.setMaximumSize(1080, 720)
-        dialog.setAttribute(Qt.WA_DeleteOnClose, True)  # make the dialog close when it loses focus
-        layout = QVBoxLayout(dialog)
-        layout.addWidget(image_label, 0, Qt.AlignHCenter | Qt.AlignVCenter)
 
-        # set the dialog to close when it loses focus
-        def onFocusOutEvent(self, event):
-            # The QDialog lost focus
-            print("QDialog lost focus")
-            event.accept()
 
-        dialog.focusOutEvent = onFocusOutEvent
-
-        # override the eventFilter method to detect mouse press events outside the dialog
-        def eventFilter(self, obj, event):
-            if event.type() == QEvent.MouseButtonPress and obj is not dialog:
-                dialog.close()
-            return super().eventFilter(obj, event)
-
-        dialog.installEventFilter(dialog)
-
-        dialog.show()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton and event.modifiers() == Qt.ControlModifier:
@@ -179,13 +147,14 @@ class ImageViewer(QListView):
         self.dir = dir.data(Qt.UserRole).name
         image_extensions = QImageReader.supportedImageFormats()
         for file in dir.data(Qt.UserRole).children:
-            path = file.path
-            if path.split('.')[-1].encode() in image_extensions:
-                pixmap = QPixmap(path)
-                item = PixmapItem(pixmap, path)
+            file_name = os.path.basename(file.path)
+            if file_name.split('.')[-1].encode() in image_extensions:
+                pixmap = QPixmap(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
+                item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.model().listdata.append(item)
         self.model().layoutChanged.emit()
+
 
     def add_image(self, item):
         self.model().listdata.append(item)
@@ -284,6 +253,7 @@ class PixmapItem(QStandardItem):
         return self.pixmap
 
     def get_path(self):
+        print(self.path)
         return self.path
 
 
@@ -330,3 +300,13 @@ class MyListModel(QAbstractListModel):
 
         mime_data.setData(self.mime_type, encoded_data)
         return mime_data
+
+    def getElementByPath(self, path):
+        for row in range(self.rowCount()):
+            index = self.index(row)
+            if self.data(index, Qt.DisplayRole).path == path:
+                return self.itemFromIndex(index)
+
+        return None
+    def remove(self,item):
+        self.listdata.remove(item)
