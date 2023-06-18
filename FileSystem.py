@@ -147,7 +147,7 @@ class FileSystem(QTreeView):
         node : FileSystemNode = self.model().get_node_by_name(dir_name)
         if node is not None:
             for i in range(0,cluster_number):
-                cluster_node = FileSystemNode(dir_name+str(i),":",node,True)
+                cluster_node = FileSystemNode(dir_name+":"+str(i),":",node,True)
                 map[i] = cluster_node
                 node.add_child(cluster_node)
         clusters = [[] for _ in range(cluster_number+1)]  # Create k empty lists to hold the items
@@ -156,7 +156,9 @@ class FileSystem(QTreeView):
             if cluster is not None and 0 <= cluster < cluster_number:
                 name = os.path.basename(item.path)
                 node2 : FileSystemNode =  self.model().get_node_by_name(name)
-                clusters[cluster].append(FileSystemNode(name,node2.path,map[item.cluster],False))
+                new_nody =  FileSystemNode(name,node2.path,map[item.cluster],False)
+                new_nody.id = node2.id
+                clusters[cluster].append(new_nody)
                 node2.parent.remove_child(node2)
         for i in range(0, cluster_number):
             map[i].add_child(clusters[i])
@@ -169,12 +171,13 @@ from os import scandir, rename
 
 class FileSystemNode:
 
-    def __init__(self, name, path, parent=None,cluster=None):
+    def __init__(self, name, path, parent=None,cluster=False):
+        self.id = 0
         self.name = name
         self.path = path
         self.parent = parent
         self.children = []
-        self.cluster = False
+        self.cluster = cluster
 
     def add_child(self, child):
         if isinstance(child, Iterable):
@@ -327,11 +330,11 @@ class FileSystemModel(QAbstractItemModel):
         return True
 
     def populate(self):
-      #  self.beginResetModel()
-       # self.populate_recursively(self.root_node)
-       # self.endResetModel()
-       # db = DataBase.DataBaseConnection()
-      #  db.build_database_(self.root_node)
+        # self.beginResetModel()
+        # self.populate_recursively(self.root_node)
+        # self.endResetModel()
+        # db = DataBase.DataBaseConnection()
+        # db.build_database_(self.root_node)
         db = DataBase.DataBaseConnection()
         self.beginResetModel()
         self.root_node = db.rebuild_file_system_model()

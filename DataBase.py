@@ -1,5 +1,7 @@
 import os
 import sqlite3
+import time
+
 import Configuration
 from typing import TYPE_CHECKING, Dict
 
@@ -47,6 +49,7 @@ class DataBaseConnection:
     def _rebuild_node(self, data, parent_id=None,parent = None):
         from FileSystem import FileSystemNode
         node = FileSystemNode(data[1], data[2], parent, data[3])
+        node.id = data[0]
         if not data[1].endswith("jpg"):
             query = "SELECT * FROM file_system WHERE parent_id = ?"
             self.cursor.execute(query, (data[0],))
@@ -62,39 +65,15 @@ class DataBaseConnection:
         query = "INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)"
         self.cursor.execute(query, (node.name, node.path, node.cluster, parent_id))
         node_id = self.cursor.lastrowid
-
+        node.id = node_id
         for child in node.children:
             self._store_node(child, parent_id=node_id)
 
         self.connection.commit()
 
-
     def cluster(self, parent_node: 'FileSystemNode', clusters: Dict[int, 'FileSystemNode'], cluster_number: int):
-        # Delete all values with parent as parent_node (search by name)
-        parent_name = parent_node.name
-        parent_id = self.get_node_id_by_name(parent_name)
-        self.cursor.execute("DELETE FROM file_system WHERE parent_id = ?", (parent_id,))
-        self.connection.commit()
+        start_time = time.time()
 
-        # Create database records for parent_node's children and save their IDs
-        child_ids = []
-        for child_node in parent_node.children:
-            self.cursor.execute("INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
-                                (child_node.name, child_node.path, 1, parent_id))
-            self.connection.commit()
-            child_id = self.cursor.lastrowid
-            child_ids.append(child_id)
-
-        # Create database records for children from the clusters dictionary, using the saved child IDs
-        for cluster_id, cluster_node in clusters.items():
-            cluster_parent_id = child_ids[cluster_id]
-            for child_node in cluster_node.children:
-                self.cursor.execute(
-                    "INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
-                    (child_node.name, child_node.path, 0, cluster_parent_id))
-                self.connection.commit()
-
-    def cluster(self, parent_node: 'FileSystemNode', clusters: Dict[int, 'FileSystemNode'], cluster_number: int):
         # Check if there are clusters (entries with isCluster = 1 having parent_node as parent)
         parent_id = self.get_node_id_by_name(parent_node.name)
         self.cursor.execute("SELECT id, name FROM file_system WHERE isCluster = 1 AND parent_id = ?",
@@ -107,29 +86,32 @@ class DataBaseConnection:
 
             # Update child IDs to match the correct clusters
             for cluster_node in clusters.values():
-                cluster_parent_name = cluster_node.name
-                cluster_parent_id = cluster_id_map[cluster_parent_name]
-
                 for child_node in cluster_node.children:
-                    child_id = self.get_node_id_by_name(child_node.name)
+                    if child_node.parent.name in cluster_id_map:
+                        parent_id_ = cluster_id_map[child_node.parent.name]
+                    else:
+                        # Create a new cluster in the database
+                        self.cursor.execute(
+                            "INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
+                            (child_node.parent.name, child_node.parent.path, 1, parent_id))
+                        self.connection.commit()
+                        parent_id_ = self.cursor.lastrowid
+                        cluster_id_map[child_node.parent.name] = parent_id_
+
                     self.cursor.execute("UPDATE file_system SET parent_id = ? WHERE id = ?",
-                                        (cluster_parent_id, child_id))
+                                        (parent_id_, child_node.id))
                     self.connection.commit()
 
-            # Delete clusters with no children
-            self.cursor.execute("DELETE FROM file_system WHERE isCluster = 1 AND parent_id = ? AND id NOT IN "
-                                "(SELECT DISTINCT parent_id FROM file_system)",
-                                (parent_id,))
-            self.connection.commit()
-
+            cluster_time = time.time() - start_time
+            print(f"Cluster Update Time: {cluster_time} seconds")
         else:
-            # Delete all values with parent as parent_node (search by name)
+            start_time = time.time()
+
+            # Get the parent ID and name
             parent_name = parent_node.name
             parent_id = self.get_node_id_by_name(parent_name)
-            self.cursor.execute("DELETE FROM file_system WHERE parent_id = ?", (parent_id,))
-            self.connection.commit()
 
-            # Create database records for parent_node's children and save their IDs
+            # Step 2: Create database records for parent_node's children and save their IDs
             child_ids = []
             for child_node in parent_node.children:
                 self.cursor.execute("INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
@@ -138,14 +120,26 @@ class DataBaseConnection:
                 child_id = self.cursor.lastrowid
                 child_ids.append(child_id)
 
-            # Create database records for children from the clusters dictionary, using the saved child IDs
+            create_children_time = time.time() - start_time
+            print(f"Creating Children Time: {create_children_time} seconds")
+
+            start_time = time.time()
+
+            # Step 3: Update the parent for each child node to the correct cluster
             for cluster_id, cluster_node in clusters.items():
                 cluster_parent_id = child_ids[cluster_id]
+                cluster_node.id = cluster_parent_id
                 for child_node in cluster_node.children:
                     self.cursor.execute(
-                        "INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
-                        (child_node.name, child_node.path, 0, cluster_parent_id))
+                        "UPDATE file_system SET parent_id = ? WHERE id = ?",
+                        (cluster_parent_id, child_node.id))
                     self.connection.commit()
+
+            update_clusters_time = time.time() - start_time
+            print(f"Updating Clusters Time: {update_clusters_time} seconds")
+
+            total_time = create_children_time + update_clusters_time
+            print(f"Total Time: {total_time} seconds")
 
     def get_node_id_by_name(self, name: str) -> int:
         self.cursor.execute("SELECT id FROM file_system WHERE name = ?", (name,))
