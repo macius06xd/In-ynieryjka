@@ -20,6 +20,7 @@ class DataBaseConnection:
         self.connection.execute("PRAGMA foreign_keys = 1")  # Enable foreign key support
         self.cursor = self.connection.cursor()
         self._create_file_system_table()
+        self._create_file_table()
 
     def _create_file_system_table(self):
         query = """
@@ -35,8 +36,22 @@ class DataBaseConnection:
         self.cursor.execute(query)
         self.connection.commit()
 
+    def _create_file_table(self):
+        query = """
+        CREATE TABLE IF NOT EXISTS file (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            path TEXT,
+            parent_id INTEGER,
+            FOREIGN KEY (parent_id) REFERENCES file_system (id)
+        );
+        """
+        self.cursor.execute(query)
+        self.connection.commit()
+
     def build_database_(self, root_node: 'FileSystemNode'):
         self.cursor.execute("DELETE FROM file_system")
+        self.cursor.execute("DELETE FROM file")
         self._store_node(root_node, parent_id=None)
         self.connection.commit()
 
@@ -46,28 +61,48 @@ class DataBaseConnection:
         root_node = self._rebuild_node(file_system_data)
         return root_node
 
-    def _rebuild_node(self, data, parent_id=None,parent = None):
+    def _rebuild_node(self, data, parent_id=None, parent=None):
         from FileSystem import FileSystemNode
-        node = FileSystemNode(data[1], data[2], parent, data[3])
-        node.id = data[0]
+        node = None
         if not data[1].endswith("jpg"):
+            node = FileSystemNode(data[1], data[2], parent, data[3])
+            node.id = data[0]
             query = "SELECT * FROM file_system WHERE parent_id = ?"
             self.cursor.execute(query, (data[0],))
             children_data = self.cursor.fetchall()
 
             for child_data in children_data:
-                child_node = self._rebuild_node(child_data, data[0],node)
+                child_node = self._rebuild_node(child_data, data[0], node)
                 node.add_child(child_node)
+        else:
+            node = FileSystemNode(data[1], data[2], parent, data[3])
+            node.id = data[0]
+
+        # Retrieve files within the current node (folder)
+        query = "SELECT * FROM file WHERE parent_id = ?"
+        self.cursor.execute(query, (data[0],))
+        files_data = self.cursor.fetchall()
+
+        for file_data in files_data:
+            file_node = FileSystemNode(file_data[1], file_data[2], node)
+            file_node.id = file_data[0]
+            node.add_child(file_node)
 
         return node
 
     def _store_node(self, node: 'FileSystemNode', parent_id=None):
-        query = "INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)"
-        self.cursor.execute(query, (node.name, node.path, node.cluster, parent_id))
-        node_id = self.cursor.lastrowid
-        node.id = node_id
+        if node.name.endswith("jpg"):
+            query = "INSERT INTO file (name, path, parent_id) VALUES (?, ?, ?)"
+            self.cursor.execute(query, (node.name, node.path, parent_id))
+            file_id = self.cursor.lastrowid
+        else:
+            query = "INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)"
+            self.cursor.execute(query, (node.name, node.path, node.cluster, parent_id))
+            file_id = self.cursor.lastrowid
+
+        node.id = file_id
         for child in node.children:
-            self._store_node(child, parent_id=node_id)
+            self._store_node(child, parent_id=file_id)
 
         self.connection.commit()
 
@@ -114,8 +149,12 @@ class DataBaseConnection:
             # Step 2: Create database records for parent_node's children and save their IDs
             child_ids = []
             for child_node in parent_node.children:
-                self.cursor.execute("INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
-                                    (child_node.name, child_node.path, 1, parent_id))
+                if child_node.name.endswith("jpg"):
+                    self.cursor.execute("INSERT INTO file (name, path, parent_id) VALUES (?, ?, ?)",
+                                        (child_node.name, child_node.path, parent_id))
+                else:
+                    self.cursor.execute("INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
+                                        (child_node.name, child_node.path, 1, parent_id))
                 self.connection.commit()
                 child_id = self.cursor.lastrowid
                 child_ids.append(child_id)
@@ -131,7 +170,7 @@ class DataBaseConnection:
                 cluster_node.id = cluster_parent_id
                 for child_node in cluster_node.children:
                     self.cursor.execute(
-                        "UPDATE file_system SET parent_id = ? WHERE id = ?",
+                        "UPDATE file SET parent_id = ? WHERE id = ?",
                         (cluster_parent_id, child_node.id))
                     self.connection.commit()
 
