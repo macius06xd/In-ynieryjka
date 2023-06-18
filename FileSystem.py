@@ -5,6 +5,8 @@ from typing import List, Iterable
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal
 from os import scandir
+
+import DataBase
 from Configuration import RESIZED_IMAGES_PATH, INITIAL_CLUSTERIZED_FOLDER
 
 from PyQt5.QtWidgets import QTreeView, QWidget, QVBoxLayout, QMenu, QAbstractItemView
@@ -37,6 +39,7 @@ class FileSystem(QTreeView):
         self.current_index = None
         layout = QVBoxLayout(self)
         layout.addWidget(self)
+        self.db = DataBase.DataBaseConnection()
         self.setLayout(layout)
     def on_deleted(self,filename):
         file_path = None
@@ -141,10 +144,10 @@ class FileSystem(QTreeView):
     def on_cluster(self,items:list,dir_name,cluster_number):
         print(dir_name)
         map = {}
-        node = self.model().get_node_by_name(dir_name)
+        node : FileSystemNode = self.model().get_node_by_name(dir_name)
         if node is not None:
             for i in range(0,cluster_number):
-                cluster_node = FileSystemNode(dir_name+str(i),"",node,True)
+                cluster_node = FileSystemNode(dir_name+str(i),":",node,True)
                 map[i] = cluster_node
                 node.add_child(cluster_node)
         clusters = [[] for _ in range(cluster_number+1)]  # Create k empty lists to hold the items
@@ -152,11 +155,12 @@ class FileSystem(QTreeView):
             cluster = item.cluster
             if cluster is not None and 0 <= cluster < cluster_number:
                 name = os.path.basename(item.path)
-                node2 =  self.model().get_node_by_name(name)
+                node2 : FileSystemNode =  self.model().get_node_by_name(name)
                 clusters[cluster].append(FileSystemNode(name,node2.path,map[item.cluster],False))
-                node.remove_child(node2)
+                node2.parent.remove_child(node2)
         for i in range(0, cluster_number):
             map[i].add_child(clusters[i])
+        self.db.cluster(node,map,cluster_number)
         self.model().layoutChanged.emit()
         pass
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
@@ -323,8 +327,14 @@ class FileSystemModel(QAbstractItemModel):
         return True
 
     def populate(self):
+      #  self.beginResetModel()
+       # self.populate_recursively(self.root_node)
+       # self.endResetModel()
+       # db = DataBase.DataBaseConnection()
+      #  db.build_database_(self.root_node)
+        db = DataBase.DataBaseConnection()
         self.beginResetModel()
-        self.populate_recursively(self.root_node)
+        self.root_node = db.rebuild_file_system_model()
         self.endResetModel()
 
     def populate_recursively(self, parent_node):
@@ -340,6 +350,18 @@ class FileSystemModel(QAbstractItemModel):
     def get_node_by_name(self, name):
         return self.get_node_recursively(self.root_node, name)
 
+    def rebuild_file_system_model(self):
+        db = DataBase.DataBaseConnection()
+        return db.rebuild_file_system_model('/')
+
+    def _rebuild_node(self, document):
+        node = FileSystemNode(document['name'], document['path'])
+        children_ids = document['children']
+        for child_id in children_ids:
+            child_document = self.get_document(child_id)
+            child_node = self._rebuild_node(child_document)
+            node.add_child(child_node)
+        return node
     def get_node_recursively(self, parent_node, name):
         if parent_node.name == name:
             return parent_node

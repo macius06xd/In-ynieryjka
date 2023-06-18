@@ -11,10 +11,12 @@ def load_feature_vectors(vectors_path, image_files):
     with h5py.File(vectors_path, 'r') as f:
         vectors = []
         for img in image_files:
-            for key in f.keys():
-                if img in f[key]:
-                    vectors.append(f[key][img][:])
-                    break
+            try:
+                values = f[img][:]
+                vectors.append(values)
+                continue
+            except:
+                continue
         return vectors
 
 class ClusteringThread(QThread):
@@ -34,6 +36,7 @@ class ClusteringThread(QThread):
         count = 0
         feature_vectors = load_feature_vectors(self.vectors_path, image_files)
 
+
         kmeans = KMeans(n_clusters=self.n_clusters)
         kmeans.fit(feature_vectors)
 
@@ -47,5 +50,3 @@ class ClusteringThread(QThread):
             # Emit the progress signal
             self.progress_updated.emit(int(count/len(image_files)*100))
 
-if __name__ == "__main__":
-    perform_clustering(INITIAL_IMAGES_FOLDER, VECTORS_PATH, INITIAL_CLUSTERIZED_FOLDER, no_of_clusters)
