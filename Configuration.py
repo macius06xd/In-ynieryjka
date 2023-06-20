@@ -1,22 +1,23 @@
-#Default images path is the path of folder which contains original-sized images
-#Resized images path is the output folder for CreateResizedDataset. It contains resized images with "_small" at the end
+    # 1. folder with raw images - images in initial state, all in one folder
+#INITIAL_IMAGES_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\klockitesty2"
+INITIAL_IMAGES_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\initial_images_folder"
 
-INITIAL_IMAGES_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\klockitesty2"
+    # 2.folder with raw images but after first, general clusterization
+#INITIAL_CLUSTERIZED_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\pliczki2"
+INITIAL_CLUSTERIZED_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\initial_clusterized_folder"
 
-INITIAL_CLUSTERIZED_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\pliczki2"
-#DEFAULT_IMAGES_PATH = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\lego"
+    # 3. folder which contains original-sized images (equal to 2(???))
+#DEFAULT_IMAGES_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\klocki"
+DEFAULT_IMAGES_PATH = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\initial_clusterized_folder"
 
-#RESIZED_IMAGES_PATH  = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\legosmall"
+    # 4. output folder for CreateResizedDataset. It contains resized images with "_small" at the end
+#RESIZED_IMAGES_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\small2"
+RESIZED_IMAGES_PATH  = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\resized_images_path"
 
-#VECTORS_PATH=r"C:\Users\logix\Desktop\inzynierka\xception.hdf"
+    # 5. path of file containing vectors
+#VECTORS_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\xception2.hdf"
+VECTORS_PATH=r"C:\Users\logix\Desktop\inzynierka\xception2.hdf"
 
-#DEFAULT_IMAGES_PATH = r"C:\Users\logix\Desktop\default"
-#RESIZED_IMAGES_PATH  = r"C:\Users\logix\Desktop\smol"
-
-DEFAULT_IMAGES_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\klocki"
-RESIZED_IMAGES_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\small2"
-VECTORS_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\xception2.hdf"
 
 #Size of images in pixels after resizing
 RESIZED_IMAGES_SIZE = 64
-
