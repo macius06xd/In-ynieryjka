@@ -125,6 +125,7 @@ class ImageBrowser(QMainWindow):
 
         self.thread = ClusteringThread(INITIAL_IMAGES_FOLDER, VECTORS_PATH, INITIAL_CLUSTERIZED_FOLDER, no_of_clusters)
         self.thread.progress_updated.connect(progress_dialog.setValue)
+        self.thread.finished.connect(progress_dialog.close)
         self.thread.start()
 
 
