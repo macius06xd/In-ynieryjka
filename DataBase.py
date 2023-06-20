@@ -133,9 +133,9 @@ class DataBaseConnection:
                         parent_id_ = self.cursor.lastrowid
                         cluster_id_map[child_node.parent.name] = parent_id_
 
-                    self.cursor.execute("UPDATE file_system SET parent_id = ? WHERE id = ?",
+                    self.cursor.execute("UPDATE file SET parent_id = ? WHERE id = ?",
                                         (parent_id_, child_node.id))
-                    self.connection.commit()
+            self.connection.commit()
 
             cluster_time = time.time() - start_time
             print(f"Cluster Update Time: {cluster_time} seconds")
@@ -155,10 +155,10 @@ class DataBaseConnection:
                 else:
                     self.cursor.execute("INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
                                         (child_node.name, child_node.path, 1, parent_id))
-                self.connection.commit()
+
                 child_id = self.cursor.lastrowid
                 child_ids.append(child_id)
-
+            self.connection.commit()
             create_children_time = time.time() - start_time
             print(f"Creating Children Time: {create_children_time} seconds")
 
@@ -172,8 +172,8 @@ class DataBaseConnection:
                     self.cursor.execute(
                         "UPDATE file SET parent_id = ? WHERE id = ?",
                         (cluster_parent_id, child_node.id))
-                    self.connection.commit()
 
+            self.connection.commit()
             update_clusters_time = time.time() - start_time
             print(f"Updating Clusters Time: {update_clusters_time} seconds")
 
