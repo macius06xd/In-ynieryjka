@@ -8,7 +8,3 @@ myślałem żeby dodać id do FileSystemNode i jakoś wtedy pewnie szybciej by b
 (dodałem to i chujowo z 2 sekundy na każdą klasteryzacje) trzeba coś zrobić żeby baza na końcu się updatowała tak jak ma być zapisane a nie za każdym razem
 
 Jednak działa szbko
-____________
-config chyba uproszczony
-okienko progresu wstepnej klasteryzacji teraz działa
-

@@ -336,10 +336,10 @@ class FileSystemModel(QAbstractItemModel):
         # db = DataBase.DataBaseConnection()
         # db.build_database_(self.root_node)
         
-         db = DataBase.DataBaseConnection()
-         self.beginResetModel()
-         self.root_node = db.rebuild_file_system_model()
-         self.endResetModel()
+        db = DataBase.DataBaseConnection()
+        self.beginResetModel()
+        self.root_node = db.rebuild_file_system_model()
+        self.endResetModel()
 
     def populate_recursively(self, parent_node):
         for child_entry in scandir(parent_node.path):
@@ -366,6 +366,7 @@ class FileSystemModel(QAbstractItemModel):
             child_node = self._rebuild_node(child_document)
             node.add_child(child_node)
         return node
+        
     def get_node_recursively(self, parent_node, name):
         if parent_node.name == name:
             return parent_node

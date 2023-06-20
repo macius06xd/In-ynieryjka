@@ -185,9 +185,17 @@ class ImageViewer(QListView):
         self.model().layoutChanged.emit()
 
 color_mapping = {
-    0: QColor(255, 0, 0),   # Red color for cluster 0
-    1: QColor(0, 255, 0),   # Green color for cluster 1
-    2: QColor(0, 0, 255),   # Blue color for cluster 2
+    0: QColor(255, 0, 0),
+    1: QColor(0, 255, 0),
+    2: QColor(0, 0, 255),
+    3: QColor(0,125,0),
+    4: QColor(0,125,125),
+    5: QColor(125,125,0),
+    6: QColor(255,255,0),
+    7: QColor(0,255,255),
+    8: QColor(255,125,0),
+    9: QColor(0,125,255),
+    10: QColor(255,125,255),
     # Add more cluster-color mappings as needed
 }
 class ImageDelegate(QStyledItemDelegate):
