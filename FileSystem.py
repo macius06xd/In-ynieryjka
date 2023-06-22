@@ -147,7 +147,7 @@ class FileSystem(QTreeView):
         node : FileSystemNode = self.model().get_node_by_name(dir_name)
         if node is not None:
             for i in range(0,cluster_number):
-                cluster_node = FileSystemNode(dir_name+":"+str(i),":",node,True)
+                cluster_node = FileSystemNode(dir_name+"-"+str(i),"-",node,True)
                 map[i] = cluster_node
                 node.add_child(cluster_node)
         clusters = [[] for _ in range(cluster_number+1)]  # Create k empty lists to hold the items

@@ -11,6 +11,8 @@ from FileSystem import FileSystem
 from ImageViewer import ImageViewer
 from Configuration import *
 from InitialClusterization import  ClusteringThread
+from MovePhotosToResults import FileManager
+from CreateResultFolder import create_result_folders
 
 thumbnail_size = RESIZED_IMAGES_SIZE
 
@@ -67,10 +69,16 @@ class ImageBrowser(QMainWindow):
         initial_clusterization_action = QAction("Perform initial clusterization", self)
         initial_clusterization_action.triggered.connect(self.prompt_for_cluster_count)
 
+        # Add new action to apply changes and create result folder
+        apply_changes_and_create_result_folder_action = QAction("Apply changes and create result folder", self)
+        apply_changes_and_create_result_folder_action.triggered.connect(create_result_folders)
+        apply_changes_and_create_result_folder_action.triggered.connect(FileManager.copy_files)
+
         self.image_list.node_changed_signal.connect(self.dir_tree.on_cluster)
         self.image_list.image_deleted.connect(self.dir_tree.on_deleted)
         options_menu.addAction(create_resized_action)
         options_menu.addAction(initial_clusterization_action)
+        options_menu.addAction(apply_changes_and_create_result_folder_action)
 
         menu_bar.addMenu(options_menu)
         self.setMenuBar(menu_bar)
