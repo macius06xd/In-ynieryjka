@@ -5,7 +5,7 @@ from array import array
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import (QApplication, QFileSystemModel, QTreeView, QSplitter, QMainWindow, QScrollArea, QWidget,
                              QVBoxLayout, QListView, QAbstractItemView, QAbstractItemDelegate, QLabel, QMessageBox,
-                             QStyle, QListWidget, QStyledItemDelegate, QDialog)
+                             QStyle, QListWidget, QStyledItemDelegate, QDialog, QSlider, QHBoxLayout)
 from PyQt5.QtGui import QPixmap, QImageReader, QStandardItemModel, QStandardItem, QPen, QIcon, QColor, QDrag, QCursor, \
     QPainter
 from PyQt5.QtCore import Qt, QDir, QSize, QEvent, pyqtSignal, QThread, QObject, QRunnable, QThreadPool, QMutex, \
@@ -63,6 +63,8 @@ class ImageViewer(QListView):
         self.image_loader_thread = None
         self.dir = None
         self.cluster = None
+
+
 
     def slider_changed(self, value):
         # Todo
@@ -160,13 +162,15 @@ class ImageViewer(QListView):
 
     def load_further(self, dir):
         image_extensions = QImageReader.supportedImageFormats()
-        for file in dir.children:
-            file_name = os.path.basename(file.path)
-            if file_name.split('.')[-1].encode() in image_extensions:
-                pixmap = QPixmap(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
-                item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                self.model().listdata.append(item)
+        if not dir.commited:
+
+            for file in dir.children :
+                file_name = os.path.basename(file.path)
+                if file_name.split('.')[-1].encode() in image_extensions:
+                    pixmap = QPixmap(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
+                    item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
+                    item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                    self.model().listdata.append(item)
     def add_image(self, item):
         self.model().listdata.append(item)
 

@@ -1,9 +1,10 @@
 import os
 import shutil
-from typing import List, Iterable
+from typing import List, Iterable, Union
 
 from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal
+from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal, \
+    pyqtSlot
 from os import scandir
 
 import DataBase
@@ -13,7 +14,36 @@ from PyQt5.QtWidgets import QTreeView, QWidget, QVBoxLayout, QMenu, QAbstractIte
 
 
 class FileSystemNode:
-    pass
+
+    def __init__(self, name, path, parent=None, cluster=False, commited=False):
+        self.id = 0
+        self.name = name
+        self.path = path
+        self.parent = parent
+        self.children = []
+        self.cluster = cluster
+        self.commited = commited
+
+
+    def add_child(self, child):
+        if isinstance(child, Iterable):
+            for c in child:
+                self.children.append(c)
+        else:
+            self.children.append(child)
+
+    def child(self, row):
+        if row >= len(self.children):
+            return self.children[len(self.children) - 1]
+        return self.children[row]
+
+    def row(self):
+        if self.parent:
+            return self.parent.children.index(self)
+        return 0
+
+    def remove_child(self, child):
+        self.children.remove(child)
 
 
 class FileSystem(QTreeView):
@@ -25,7 +55,7 @@ class FileSystem(QTreeView):
         self.clicked.connect(self.on_tree_clicked)
         model = FileSystemModel()
         self.setModel(model)
-        self.model().populate()
+        self.model().populate(self)
         self.setModel(self.model())
         self.setIndentation(20)
         self.setSortingEnabled(True)
@@ -47,6 +77,10 @@ class FileSystem(QTreeView):
         self.db = DataBase.DataBaseConnection()
         self.setLayout(layout)
 
+
+    def commit(self):
+        for node in self.model().get_commited_nodes():
+            self.Node_Commited.emit(node)
     def on_deleted(self, filenames):
         if isinstance(filenames, str):
             filenames = [filenames]  # Convert single filename to a list
@@ -69,14 +103,26 @@ class FileSystem(QTreeView):
         print("elo")
 
     def populate(self):
-        self.model().populate()
+        self.model().populate(self)
 
     def showContextMenu(self, point):
         index = self.indexAt(point)
         if index.isValid():
             menu = QMenu(self)
-            # Add actions to the menu for interacting with the selected item
+
+            commit_action = menu.addAction("Commit")
+            commit_action.triggered.connect(self.commitNode)
+
+            # Add other actions to the menu if needed
+
             menu.exec_(self.viewport().mapToGlobal(point))
+
+    def commitNode(self):
+        if self.current_index.isValid():
+            node = self.current_index.data(Qt.UserRole)
+            self.Node_Commited.emit(node)
+            self.db.commit(node)
+            self.model().layoutChanged.emit()
 
     def rowsInserted(self, parent: QModelIndex, first: int, last: int) -> None:
         print("dodaje")
@@ -124,38 +170,6 @@ class FileSystem(QTreeView):
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
 from os import scandir, rename
-
-
-class FileSystemNode:
-
-    def __init__(self, name, path, parent=None, cluster=False, commited=False):
-        self.id = 0
-        self.name = name
-        self.path = path
-        self.parent = parent
-        self.children = []
-        self.cluster = cluster
-        self.commited = commited
-
-    def add_child(self, child):
-        if isinstance(child, Iterable):
-            for c in child:
-                self.children.append(c)
-        else:
-            self.children.append(child)
-
-    def child(self, row):
-        if row >= len(self.children):
-            return self.children[len(self.children) - 1]
-        return self.children[row]
-
-    def row(self):
-        if self.parent:
-            return self.parent.children.index(self)
-        return 0
-
-    def remove_child(self, child):
-        self.children.remove(child)
 
 
 class FileSystemModel(QAbstractItemModel):
@@ -287,17 +301,20 @@ class FileSystemModel(QAbstractItemModel):
 
         return True
 
-    def populate(self):
-        self.beginResetModel()
-        self.populate_recursively(self.root_node)
-        self.endResetModel()
-        db = DataBase.DataBaseConnection()
-        db.build_database_(self.root_node)
-
-        # db = DataBase.DataBaseConnection()
+    @pyqtSlot()
+    def populate(self,parent):
+        # print("Ocochodzi")
         # self.beginResetModel()
-        # self.root_node = db.rebuild_file_system_model()
+        # self.populate_recursively(self.root_node)
         # self.endResetModel()
+        # db = DataBase.DataBaseConnection()
+        # db.build_database_(self.root_node)
+
+        db = DataBase.DataBaseConnection()
+        self.beginResetModel()
+        self.root_node = db.rebuild_file_system_model()
+        self.endResetModel()
+
 
     def populate_recursively(self, parent_node):
         for child_entry in scandir(parent_node.path):
@@ -339,3 +356,15 @@ class FileSystemModel(QAbstractItemModel):
                     return node
 
         return None
+
+    def get_commited_nodes(self):
+        commited_nodes = []
+
+        def traverse_node(node):
+            if node.commited:
+                commited_nodes.append(node)
+            for child_node in node.children:
+                traverse_node(child_node)
+
+        traverse_node(self.root_node)
+        return commited_nodes

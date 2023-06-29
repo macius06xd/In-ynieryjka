@@ -65,8 +65,8 @@ class DataBaseConnection:
     def _rebuild_node(self, data, parent_id=None, parent=None):
         from FileSystem import FileSystemNode
         node = None
-        if not data[1].endswith("jpg") and data[4] != 1:
-            node = FileSystemNode(data[1], data[2], parent, data[3])
+        if not data[1].endswith("jpg"):
+            node = FileSystemNode(data[1], data[2], parent, data[3],data[5])
             node.id = data[0]
             query = "SELECT * FROM file_system WHERE parent_id = ?"
             self.cursor.execute(query, (data[0],))
@@ -76,7 +76,7 @@ class DataBaseConnection:
                 child_node = self._rebuild_node(child_data, data[0], node)
                 node.add_child(child_node)
         else:
-            node = FileSystemNode(data[1], data[2], parent, data[3])
+            node = FileSystemNode(data[1], data[2], parent, data[3],data[5])
             node.id = data[0]
 
         # Retrieve files within the current node (folder)
@@ -112,7 +112,7 @@ class DataBaseConnection:
 
         # Check if there are clusters (entries with isCluster = 1 having parent_node as parent)
         parent_id = self.get_node_id_by_name(parent_node.name)
-        self.cursor.execute("SELECT id, name FROM file_system WHERE isCluster = 1 AND parent_id = ? and commited = 0",
+        self.cursor.execute("SELECT id, name FROM file_system WHERE isCluster = 1 AND parent_id = ? AND (commited IS NULL OR commited <> 1)",
                             (parent_id,))
         cluster_entries = self.cursor.fetchall()
 
@@ -191,7 +191,7 @@ class DataBaseConnection:
             return -1
 
     def commit(self, node: 'FileSystemNode'):
-        self.cursor.execute("UPDATE file_system set commited = 1 WHERE id = ?", node.id)
+        self.cursor.execute("UPDATE file_system set commited = 1 WHERE id = ?", (node.id,))
         self.connection.commit()
 
     def deletefile(self,node:'FileSystemNode'):

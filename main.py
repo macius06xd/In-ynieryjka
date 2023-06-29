@@ -38,7 +38,8 @@ class ImageBrowser(QMainWindow):
         self.splitter.addWidget(self.dir_tree)
         self.splitter.addWidget(self.image_list)
         self.splitter.addWidget(self.CommitedFilesWidget)
-        self.splitter.setSizes([5, 90, 5])
+        splittersize = self.splitter.size().width();
+        self.splitter.setSizes([int(element * splittersize) for element in [0.05,0.9,0.05]])
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setMinimum(0)
         self.slider.setMaximum(10)
@@ -55,7 +56,7 @@ class ImageBrowser(QMainWindow):
 
         main_widget.setLayout(window_layout)
         self.setCentralWidget(main_widget)
-
+        self.dir_tree.Node_Commited.connect(self.CommitedFilesWidget.add_commit)
         self.slider.sliderReleased.connect(lambda: self.sliderValueChanged(self.slider.value()))
         self.slider.sliderReleased.connect(lambda: self.image_list.slider_changed(self.slider.value()))
         # Create menu bar
@@ -82,7 +83,7 @@ class ImageBrowser(QMainWindow):
 
         menu_bar.addMenu(options_menu)
         self.setMenuBar(menu_bar)
-
+        self.dir_tree.commit()
         self.showFullScreen()
 
     def sliderValueChanged(self, value):
