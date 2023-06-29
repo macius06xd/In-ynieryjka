@@ -154,9 +154,19 @@ class ImageViewer(QListView):
                 item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.model().listdata.append(item)
+            if file.cluster:
+                self.load_further(file)
         self.model().layoutChanged.emit()
 
-
+    def load_further(self, dir):
+        image_extensions = QImageReader.supportedImageFormats()
+        for file in dir.children:
+            file_name = os.path.basename(file.path)
+            if file_name.split('.')[-1].encode() in image_extensions:
+                pixmap = QPixmap(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
+                item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                self.model().listdata.append(item)
     def add_image(self, item):
         self.model().listdata.append(item)
 

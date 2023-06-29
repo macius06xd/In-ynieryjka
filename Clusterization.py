@@ -23,7 +23,7 @@ class Cluster:
 
     def set_clusters(self, clusters:int, items: List[PixmapItem]):
         self.clusters = clusters
-        if(self.items != items):
+        if self.items != items:
             self.items = items
             self.perform()
         self.fit()

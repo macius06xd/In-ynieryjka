@@ -4,7 +4,7 @@ import numpy as np
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QThread, pyqtSlot  , Qt
 from PyQt5.QtWidgets import QApplication
 
-from Configuration import DEFAULT_IMAGES_PATH
+from Configuration import DEFAULT_IMAGES_PATH, INITIAL_CLUSTERIZED_FOLDER
 from Configuration import RESIZED_IMAGES_PATH
 from Configuration import RESIZED_IMAGES_SIZE
 
@@ -68,6 +68,10 @@ class ImageResizeThreadPool (QThread):
         self.files_processed = 0
 
     def run(self):
+        trash_folder = os.path.join(INITIAL_CLUSTERIZED_FOLDER, "trash")
+
+        # Create the trash folder if it doesn't exist
+        os.makedirs(trash_folder, exist_ok=True)
         for subdir, dirs, files in os.walk(self.input_folder):
             for file in files:
                 input_path = os.path.join(subdir, file)

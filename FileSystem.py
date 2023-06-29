@@ -12,7 +12,12 @@ from Configuration import RESIZED_IMAGES_PATH, INITIAL_CLUSTERIZED_FOLDER
 from PyQt5.QtWidgets import QTreeView, QWidget, QVBoxLayout, QMenu, QAbstractItemView
 
 
+class FileSystemNode:
+    pass
+
+
 class FileSystem(QTreeView):
+    Node_Commited = pyqtSignal(FileSystemNode)
 
     def __init__(self, image_viewer, parent=None):
         super().__init__(parent)
@@ -41,31 +46,23 @@ class FileSystem(QTreeView):
         layout.addWidget(self)
         self.db = DataBase.DataBaseConnection()
         self.setLayout(layout)
-    def on_deleted(self,filename):
-        file_path = None
-        child_node = None
-        child_node = self.model().get_node_by_name(filename)
-        node = child_node.parent
-        file_path = child_node.path
-        node.children.remove(child_node)
-        trash_folder = os.path.join(INITIAL_CLUSTERIZED_FOLDER,"thrash")
 
-        # Create the trash folder if it doesn't exist
-        os.makedirs(trash_folder, exist_ok=True)
+    def on_deleted(self, filenames):
+        if isinstance(filenames, str):
+            filenames = [filenames]  # Convert single filename to a list
+        for filename in filenames:
+            child_node = self.model().get_node_by_name(filename)
+            if child_node is not None:
+                node = child_node.parent
+                node.children.remove(child_node)
 
-        # Extract the filename from the file path
-        filename = os.path.basename(file_path)
+                self.db.deletefile(child_node)
 
-        # Construct the target path in the trash folder
-        target_path = os.path.join(trash_folder, filename)
-        print(file_path)
-        # Move the file to the trash folder
-        shutil.move(file_path, target_path)
+                trash = self.model().get_node_by_name("trash")
 
-        thrash = self.model().get_node_by_name("thrash")
+                child_node.parent = trash
+                trash.add_child(child_node)
 
-        child_node.parent = thrash
-        thrash.add_child(child_node)
         self.model().layoutChanged.emit()
 
     def changed(self):
@@ -80,47 +77,6 @@ class FileSystem(QTreeView):
             menu = QMenu(self)
             # Add actions to the menu for interacting with the selected item
             menu.exec_(self.viewport().mapToGlobal(point))
-
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasFormat("application/x-qabstractitemmodeldatalist"):
-            event.accept()
-        else:
-            event.ignore()
-
-    def dragMoveEvent(self, event):
-        event.acceptProposedAction()
-
-    def dropEvent(self, event):
-        event.setDropAction(Qt.MoveAction)
-        data = event.mimeData().data("application/x-qabstractitemmodeldatalist")
-        stream = QDataStream(data, QIODevice.ReadOnly)
-        row = self.indexAt(event.pos())
-        parent = row
-        if len(row.data(Qt.UserRole).children) == 0:
-            parent = row.data(Qt.UserRole).parent
-        else:
-            parent = parent.data(Qt.UserRole)
-
-        new_items = []
-        indexed = []
-        indexed.append(row)
-        while not stream.atEnd():
-            name = (stream.readQString())
-            path = (stream.readQString())
-            indexed.append(stream.readQString())
-            new_node = FileSystemNode(name, path, parent)
-            new_items.append(new_node)
-
-        if len(new_items) > 0:
-            first_row = self.model().rowCount(row)
-            last_row = first_row + len(new_items) - 1
-            self.model().beginInsertRows(row, first_row, last_row)
-            for item in new_items:
-                parent.add_child(item)
-            self.model().endInsertRows()
-            self.model().layoutChanged.emit()
-
-        event.accept()
 
     def rowsInserted(self, parent: QModelIndex, first: int, last: int) -> None:
         print("dodaje")
@@ -140,44 +96,46 @@ class FileSystem(QTreeView):
         if len(index.data(Qt.UserRole).children) != 0:
             self.image_viewer.load_images_from_folder(index)
 
-
-    def on_cluster(self,items:list,dir_name,cluster_number):
+    def on_cluster(self, items: list, dir_name, cluster_number):
         print(dir_name)
         map = {}
-        node : FileSystemNode = self.model().get_node_by_name(dir_name)
+        node: FileSystemNode = self.model().get_node_by_name(dir_name)
         if node is not None:
-            for i in range(0,cluster_number):
-                cluster_node = FileSystemNode(dir_name+"-"+str(i),"-",node,True)
+            for i in range(0, cluster_number):
+                cluster_node = FileSystemNode(dir_name + "-" + str(i), "-", node, True)
                 map[i] = cluster_node
                 node.add_child(cluster_node)
-        clusters = [[] for _ in range(cluster_number+1)]  # Create k empty lists to hold the items
+        clusters = [[] for _ in range(cluster_number + 1)]  # Create k empty lists to hold the items
         for item in items:
             cluster = item.cluster
             if cluster is not None and 0 <= cluster < cluster_number:
                 name = os.path.basename(item.path)
-                node2 : FileSystemNode =  self.model().get_node_by_name(name)
-                new_nody =  FileSystemNode(name,node2.path,map[item.cluster],False)
+                node2: FileSystemNode = self.model().get_node_by_name(name)
+                new_nody = FileSystemNode(name, node2.path, map[item.cluster], False)
                 new_nody.id = node2.id
                 clusters[cluster].append(new_nody)
                 node2.parent.remove_child(node2)
         for i in range(0, cluster_number):
             map[i].add_child(clusters[i])
-        self.db.cluster(node,map,cluster_number)
+        self.db.cluster(node, map, cluster_number)
         self.model().layoutChanged.emit()
         pass
+
+
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
 from os import scandir, rename
 
 
 class FileSystemNode:
 
-    def __init__(self, name, path, parent=None,cluster=False):
+    def __init__(self, name, path, parent=None, cluster=False, commited=False):
         self.id = 0
         self.name = name
         self.path = path
         self.parent = parent
         self.children = []
         self.cluster = cluster
+        self.commited = commited
 
     def add_child(self, child):
         if isinstance(child, Iterable):
@@ -330,16 +288,16 @@ class FileSystemModel(QAbstractItemModel):
         return True
 
     def populate(self):
-        # self.beginResetModel()
-        # self.populate_recursively(self.root_node)
-        # self.endResetModel()
-        # db = DataBase.DataBaseConnection()
-        # db.build_database_(self.root_node)
-        
-        db = DataBase.DataBaseConnection()
         self.beginResetModel()
-        self.root_node = db.rebuild_file_system_model()
+        self.populate_recursively(self.root_node)
         self.endResetModel()
+        db = DataBase.DataBaseConnection()
+        db.build_database_(self.root_node)
+
+        # db = DataBase.DataBaseConnection()
+        # self.beginResetModel()
+        # self.root_node = db.rebuild_file_system_model()
+        # self.endResetModel()
 
     def populate_recursively(self, parent_node):
         for child_entry in scandir(parent_node.path):
@@ -366,7 +324,7 @@ class FileSystemModel(QAbstractItemModel):
             child_node = self._rebuild_node(child_document)
             node.add_child(child_node)
         return node
-        
+
     def get_node_recursively(self, parent_node, name):
         if parent_node.name == name:
             return parent_node

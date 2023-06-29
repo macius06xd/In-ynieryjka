@@ -1,27 +1,21 @@
 import sys
-import os
-from PyQt5.QtWidgets import (QApplication, QFileSystemModel, QTreeView, QSplitter, QMainWindow, QScrollArea, QWidget,
-                             QVBoxLayout, QListView, QAbstractItemView, QDesktopWidget, QMenuBar, QMenu, QAction,
-                             QProgressDialog, QSlider, QLabel, QInputDialog)
-from PyQt5.QtGui import QPixmap, QImageReader, QStandardItemModel, QStandardItem
-from PyQt5.QtCore import Qt, QDir, QSize, QEvent, pyqtSignal, QThread
 
+from PyQt5.QtCore import Qt, QThread
+from PyQt5.QtWidgets import (QApplication, QSpacerItem, QSizePolicy, QFileSystemModel, QSplitter, QMainWindow, QWidget,
+                             QVBoxLayout, QDesktopWidget, QMenuBar, QMenu, QAction,
+                             QProgressDialog, QSlider, QLabel, QInputDialog, QHBoxLayout)
+
+from Configuration import *
 from CreateResizedDataset import ImageResizeThreadPool
+from CreateResultFolder import create_result_folders
 from FileSystem import FileSystem
 from ImageViewer import ImageViewer
-from Configuration import *
-from InitialClusterization import  ClusteringThread
+from InitialClusterization import ClusteringThread
 from MovePhotosToResults import FileManager
-from CreateResultFolder import create_result_folders
+from CommitedLayout import CommitedFilesWidget
 
 thumbnail_size = RESIZED_IMAGES_SIZE
 
-from PyQt5.QtWidgets import QAbstractItemDelegate
-
-class CustomFileSystemModel(QFileSystemModel):
-    def __init__(self, root_path):
-        super().__init__()
-        self.setRootPath(root_path)
 
 class ImageBrowser(QMainWindow):
     def __init__(self):
@@ -31,33 +25,39 @@ class ImageBrowser(QMainWindow):
 
     def initUI(self):
         self.setWindowTitle('Image Browser')
-        screen = QDesktopWidget().screenGeometry()
-        width, height = screen.width(), screen.height()
 
-        # resize window to match screen size
-        self.resize(width, height)
         main_widget = QWidget()
-        main_layout = QVBoxLayout()
+        window_layout = QVBoxLayout()
+        main_layout = QHBoxLayout()
 
-        self.splitter = QSplitter(Qt.Vertical)
+        self.splitter = QSplitter()
         self.image_list = ImageViewer()
         self.dir_tree = FileSystem(self.image_list)
-        self.splitter.addWidget(self.dir_tree)
+        self.CommitedFilesWidget = CommitedFilesWidget()
 
+        self.splitter.addWidget(self.dir_tree)
         self.splitter.addWidget(self.image_list)
+        self.splitter.addWidget(self.CommitedFilesWidget)
+        self.splitter.setSizes([5, 90, 5])
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setMinimum(0)
         self.slider.setMaximum(10)
         self.sliderlabel = QLabel()
-        main_layout.setAlignment(Qt.AlignHCenter)
-        self.slider.sliderReleased.connect(lambda : self.sliderValueChanged(self.slider.value()))
-        self.slider.sliderReleased.connect(lambda : self.image_list.slider_changed(self.slider.value()))
+
         main_layout.addWidget(self.splitter)
-        main_layout.addWidget(self.sliderlabel)
-        main_layout.addWidget(self.slider)
-        main_widget.setLayout(main_layout)
+
+        bottom_layout = QHBoxLayout()
+        bottom_layout.addWidget(self.slider)
+        bottom_layout.addWidget(self.sliderlabel)
+        window_layout.addLayout(main_layout, stretch=95)
+        window_layout.addStretch(1)
+        window_layout.addLayout(bottom_layout)
+
+        main_widget.setLayout(window_layout)
         self.setCentralWidget(main_widget)
 
+        self.slider.sliderReleased.connect(lambda: self.sliderValueChanged(self.slider.value()))
+        self.slider.sliderReleased.connect(lambda: self.image_list.slider_changed(self.slider.value()))
         # Create menu bar
         menu_bar = QMenuBar(self)
         options_menu = QMenu("&Options", self)
@@ -107,9 +107,11 @@ class ImageBrowser(QMainWindow):
         progress_dialog.setAutoReset(True)
         progress_dialog.setWindowTitle("Progress")
         progress_dialog.show()
+
         def workerfinishedhandler():
             self.dir_tree.populate()
             progress_dialog.close()
+
         self.resize_threadpool.finished.connect(
             workerfinishedhandler
         )
@@ -117,7 +119,7 @@ class ImageBrowser(QMainWindow):
         self.thread.start()
 
     def prompt_for_cluster_count(self):
-        cluster_count, ok_pressed = QInputDialog.getInt(self, "Get integer","Number of Clusters:", 4, 0, 100, 1)
+        cluster_count, ok_pressed = QInputDialog.getInt(self, "Get integer", "Number of Clusters:", 4, 0, 100, 1)
         if ok_pressed:
             self.perform_initial_clusterization(cluster_count)
 
@@ -137,9 +139,8 @@ class ImageBrowser(QMainWindow):
         self.thread.start()
 
 
-
 class ResizeThread(QThread):
-    def __init__(self, input_path, output_path,parent):
+    def __init__(self, input_path, output_path, parent):
         super().__init__()
         self.input_path = input_path
         self.output_path = output_path
@@ -147,6 +148,7 @@ class ResizeThread(QThread):
 
     def run(self):
         self.parent.create_resized_dataset(self.input_path, self.output_path)
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

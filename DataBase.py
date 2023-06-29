@@ -30,6 +30,7 @@ class DataBaseConnection:
             path TEXT,
             isCluster INTEGER,
             parent_id INTEGER,
+            commited INTEGER,
             FOREIGN KEY (parent_id) REFERENCES file_system (id)
         );
         """
@@ -50,8 +51,8 @@ class DataBaseConnection:
         self.connection.commit()
 
     def build_database_(self, root_node: 'FileSystemNode'):
-        self.cursor.execute("DELETE FROM file_system")
         self.cursor.execute("DELETE FROM file")
+        self.cursor.execute("DELETE FROM file_system")
         self._store_node(root_node, parent_id=None)
         self.connection.commit()
 
@@ -64,7 +65,7 @@ class DataBaseConnection:
     def _rebuild_node(self, data, parent_id=None, parent=None):
         from FileSystem import FileSystemNode
         node = None
-        if not data[1].endswith("jpg"):
+        if not data[1].endswith("jpg") and data[4] != 1:
             node = FileSystemNode(data[1], data[2], parent, data[3])
             node.id = data[0]
             query = "SELECT * FROM file_system WHERE parent_id = ?"
@@ -96,8 +97,8 @@ class DataBaseConnection:
             self.cursor.execute(query, (node.name, node.path, parent_id))
             file_id = self.cursor.lastrowid
         else:
-            query = "INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)"
-            self.cursor.execute(query, (node.name, node.path, node.cluster, parent_id))
+            query = "INSERT INTO file_system (name, path, isCluster, parent_id,commited) VALUES (?, ?, ?, ?,?)"
+            self.cursor.execute(query, (node.name, node.path, node.cluster, parent_id, 0))
             file_id = self.cursor.lastrowid
 
         node.id = file_id
@@ -111,7 +112,7 @@ class DataBaseConnection:
 
         # Check if there are clusters (entries with isCluster = 1 having parent_node as parent)
         parent_id = self.get_node_id_by_name(parent_node.name)
-        self.cursor.execute("SELECT id, name FROM file_system WHERE isCluster = 1 AND parent_id = ?",
+        self.cursor.execute("SELECT id, name FROM file_system WHERE isCluster = 1 AND parent_id = ? and commited = 0",
                             (parent_id,))
         cluster_entries = self.cursor.fetchall()
 
@@ -153,8 +154,9 @@ class DataBaseConnection:
                     self.cursor.execute("INSERT INTO file (name, path, parent_id) VALUES (?, ?, ?)",
                                         (child_node.name, child_node.path, parent_id))
                 else:
-                    self.cursor.execute("INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
-                                        (child_node.name, child_node.path, 1, parent_id))
+                    self.cursor.execute(
+                        "INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
+                        (child_node.name, child_node.path, 1, parent_id))
 
                 child_id = self.cursor.lastrowid
                 child_ids.append(child_id)
@@ -187,3 +189,12 @@ class DataBaseConnection:
             return row[0]
         else:
             return -1
+
+    def commit(self, node: 'FileSystemNode'):
+        self.cursor.execute("UPDATE file_system set commited = 1 WHERE id = ?", node.id)
+        self.connection.commit()
+
+    def deletefile(self,node:'FileSystemNode'):
+        self.cursor.execute("select id from file_system where name = 'trash'")
+        row = self.cursor.fetchone()
+        self.cursor.execute("update file set parent_id = ? where id = ? ",(row[0],node.id))
