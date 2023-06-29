@@ -77,6 +77,7 @@ class CommitedFolderListModel(QAbstractListModel):
 
     def add_element(self, element: 'FileSystemNode'):
         print("siema")
+        element.commited=1
         self._data.append(element)
 
 
