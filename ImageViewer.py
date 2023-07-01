@@ -1,30 +1,23 @@
-import string
-import time
 from array import array
 
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import (QApplication, QFileSystemModel, QTreeView, QSplitter, QMainWindow, QScrollArea, QWidget,
-                             QVBoxLayout, QListView, QAbstractItemView, QAbstractItemDelegate, QLabel, QMessageBox,
-                             QStyle, QListWidget, QStyledItemDelegate, QDialog, QSlider, QHBoxLayout)
-from PyQt5.QtGui import QPixmap, QImageReader, QStandardItemModel, QStandardItem, QPen, QIcon, QColor, QDrag, QCursor, \
-    QPainter
-from PyQt5.QtCore import Qt, QDir, QSize, QEvent, pyqtSignal, QThread, QObject, QRunnable, QThreadPool, QMutex, \
-    QModelIndex, QAbstractListModel, QMimeData, QByteArray, QDataStream, QIODevice, QPoint, QItemSelectionModel, \
-    QVariant
+from PyQt5.QtCore import Qt, QSize, QEvent, pyqtSignal, QModelIndex, QAbstractListModel, QMimeData, QByteArray, \
+    QDataStream, QIODevice, QVariant
+from PyQt5.QtGui import QPixmap, QImageReader, QStandardItem, QPen, QColor, QDrag
+from PyQt5.QtWidgets import (QListView, QAbstractItemView, QMessageBox,
+                             QStyle, QStyledItemDelegate)
 
 import Configuration
 from Configuration import RESIZED_IMAGES_SIZE
 from FileSystem import FileSystemNode
 
 thumbnail_size = RESIZED_IMAGES_SIZE
-import sys
 import os
 
 
-
 class ImageViewer(QListView):
-    node_changed_signal = pyqtSignal(list, QModelIndex, int)
+    node_changed_signal = pyqtSignal(list, FileSystemNode, int)
     image_deleted = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
         self.files = None
@@ -51,19 +44,18 @@ class ImageViewer(QListView):
         self.dir = None
         self.cluster = None
 
-
-    #Clusterization Behaviour
+    # Clusterization Behaviour
     def slider_changed(self, value):
         # Todo
         from Clusterization import Cluster
         if self.dir.commited == 0:
             if self.cluster is None:
-                self.cluster = Cluster(self.model().listdata,value)
+                self.cluster = Cluster(self.model().listdata, value)
 
-            self.cluster.set_clusters(value,self.model().listdata)
-            self.model().listdata = sorted(self.model().listdata,key = lambda x:x.cluster)
+            self.cluster.set_clusters(value, self.model().listdata)
+            self.model().listdata = sorted(self.model().listdata, key=lambda x: x.cluster)
             self.model().layoutChanged.emit()
-            self.node_changed_signal.emit(self.model().listdata,self.dir,value)
+            self.node_changed_signal.emit(self.model().listdata, self.dir, value)
         else:
             error_message = "Can't Cluster committed folder"
             QMessageBox.critical(self, "Error", error_message)
@@ -75,11 +67,12 @@ class ImageViewer(QListView):
         self.ctrl_pressed = False
         self.viewport().update()
 
-    def onImageClicked(self, imagePath: str):
-        #TODO make it workd with item.node
-        self.model().remove(self.model().getElementByPath(imagePath))
+    def onImageClicked(self, imageId: int):
+        # TODO make it workd with item.node
+        node = self.model().getElementById(imageId)
+        self.model().remove(node)
         # change to signal later
-        self.image_deleted.emit(os.path.basename(imagePath))
+        self.image_deleted.emit(os.path.basename(node.path))
         self.model().layoutChanged.emit()
 
     # NOT USED DEPRECEATED (MOVING IMAGES)
@@ -124,7 +117,8 @@ class ImageViewer(QListView):
     # NOT USED DEPRECEATED (MOVING IMAGES)
     def dragMoveEvent(self, event):
         event.acceptProposedAction()
-    #NOT USED DEPRECEATED (MOVING IMAGES)
+
+    # NOT USED DEPRECEATED (MOVING IMAGES)
     def dropEvent(self, event):
         print("elo23")
         mime_data = event.mimeData()
@@ -137,34 +131,37 @@ class ImageViewer(QListView):
             paths = mime_data.text().split('\n')
             self.add_to_model(paths)
         event.acceptProposedAction()
-    #Loading images when folder (File System is clicked)
+
+    # Loading images when folder (File System is clicked)
     def load_images_from_folder(self, dir):
         self.model().listdata.clear()
-        self.dir = dir
+        self.dir = dir.internalPointer()
         image_extensions = QImageReader.supportedImageFormats()
         for file in dir.data(Qt.UserRole).children:
             file_name = os.path.basename(file.path)
             if file_name.split('.')[-1].encode() in image_extensions:
                 pixmap = QPixmap(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
-                item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name),file)
+                item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name), file)
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.model().listdata.append(item)
             if file.cluster:
                 self.load_further(file)
         self.model().layoutChanged.emit()
-    #Recurssion for loading
+
+    # Recurssion for loading
     def load_further(self, dir):
         image_extensions = QImageReader.supportedImageFormats()
         if not dir.commited:
-            for file in dir.children :
+            for file in dir.children:
                 file_name = os.path.basename(file.path)
                 if file_name.split('.')[-1].encode() in image_extensions:
                     pixmap = QPixmap(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
-                    item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name),file)
+                    item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name), file)
                     item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                     self.model().listdata.append(item)
                 if file.cluster:
                     self.load_further(file)
+
     def add_image(self, item):
         self.model().listdata.append(item)
 
@@ -193,32 +190,36 @@ class ImageViewer(QListView):
             i = i + 1
         self.model().layoutChanged.emit()
 
+
 color_mapping = {
     0: QColor(255, 0, 0),
     1: QColor(0, 255, 0),
     2: QColor(0, 0, 255),
-    3: QColor(0,125,0),
-    4: QColor(0,125,125),
-    5: QColor(125,125,0),
-    6: QColor(255,255,0),
-    7: QColor(0,255,255),
-    8: QColor(255,125,0),
-    9: QColor(0,125,255),
-    10: QColor(255,125,255),
+    3: QColor(0, 125, 0),
+    4: QColor(0, 125, 125),
+    5: QColor(125, 125, 0),
+    6: QColor(255, 255, 0),
+    7: QColor(0, 255, 255),
+    8: QColor(255, 125, 0),
+    9: QColor(0, 125, 255),
+    10: QColor(255, 125, 255),
     # Add more cluster-color mappings as needed
 }
+
+
 class ImageDelegate(QStyledItemDelegate):
-    imageClicked = pyqtSignal(str)
+    imageClicked = pyqtSignal(int)
 
     def paint(self, painter, option, index):
         if not index.isValid():
             return
         cluster = index.data(Qt.DisplayRole)
         painter.save()
-                # Fill the background with the appropriate color
+        # Fill the background with the appropriate color
         enlarged_rect = option.rect.adjusted(-8, -8, 8, 8)
         if cluster is not None:
-            color = color_mapping.get(cluster.cluster,QColor(0, 0, 0))  # Default to black if cluster value not found in mapping
+            color = color_mapping.get(cluster.cluster,
+                                      QColor(0, 0, 0))  # Default to black if cluster value not found in mapping
             painter.fillRect(enlarged_rect, color)
 
         pixmap = index.data()
@@ -240,7 +241,7 @@ class ImageDelegate(QStyledItemDelegate):
             return True
 
         elif event.type() == QEvent.MouseButtonPress and event.button() == Qt.RightButton:
-            self.imageClicked.emit(index.data().path)
+            self.imageClicked.emit(index.data().node.id)
             return True
 
         return super().editorEvent(event, model, option, index)
@@ -256,7 +257,7 @@ class ImageDelegate(QStyledItemDelegate):
 
 
 class PixmapItem(QStandardItem):
-    def __init__(self, pixmap, path,node, cluster=None):
+    def __init__(self, pixmap, path, node, cluster=None):
         super().__init__()
         self.pixmap = pixmap
         self.path = path
@@ -330,5 +331,6 @@ class MyListModel(QAbstractListModel):
                 return self.itemFromIndex(index)
 
         return None
-    def remove(self,item):
+
+    def remove(self, item):
         self.listdata.remove(item)

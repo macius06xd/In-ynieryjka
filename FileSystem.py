@@ -146,7 +146,7 @@ class FileSystem(QTreeView):
     ## Problem jest taki że to ledwo działa
     def on_cluster(self, items: list, dir: QModelIndex, cluster_number):
         map = {}
-        node: FileSystemNode = dir.internalPointer()
+        node: FileSystemNode = dir
         dir_name = node.name
         if node is not None:
             for i in range(0, cluster_number):
