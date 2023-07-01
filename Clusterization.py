@@ -39,6 +39,7 @@ class Cluster:
             file_name2 = file_name2.replace("_small", "")
             file_name = file_name2 + file_extension
             second_folder_name = os.path.basename(os.path.dirname(file_path))
+            #TODO load data if not in vector
             data = self.vector_file[file_name][:]
             self.data_list[i] = (item, data)  # Store item-data pair in the preallocated list
 

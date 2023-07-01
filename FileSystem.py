@@ -20,10 +20,9 @@ class FileSystemNode:
         self.name = name
         self.path = path
         self.parent = parent
-        self.children = []
+        self.children: list[FileSystemNode] = []
         self.cluster = cluster
         self.commited = commited
-
 
     def add_child(self, child):
         if isinstance(child, Iterable):
@@ -77,10 +76,10 @@ class FileSystem(QTreeView):
         self.db = DataBase.DataBaseConnection()
         self.setLayout(layout)
 
-
     def commit(self):
         for node in self.model().get_commited_nodes():
             self.Node_Commited.emit(node)
+
     def on_deleted(self, filenames):
         if isinstance(filenames, str):
             filenames = [filenames]  # Convert single filename to a list
@@ -142,10 +141,13 @@ class FileSystem(QTreeView):
         if len(index.data(Qt.UserRole).children) != 0:
             self.image_viewer.load_images_from_folder(index)
 
-    def on_cluster(self, items: list, dir_name, cluster_number):
-        print(dir_name)
+    ## nie wiem co tu sie dzieje ale działa (nie dotykac)
+    ## jednak nie dziala ale nie wiem jak naprawic xd
+    ## Problem jest taki że to ledwo działa
+    def on_cluster(self, items: list, dir: QModelIndex, cluster_number):
         map = {}
-        node: FileSystemNode = self.model().get_node_by_name(dir_name)
+        node: FileSystemNode = dir.internalPointer()
+        dir_name = node.name
         if node is not None:
             for i in range(0, cluster_number):
                 cluster_node = FileSystemNode(dir_name + "-" + str(i), "-", node, True)
@@ -302,7 +304,7 @@ class FileSystemModel(QAbstractItemModel):
         return True
 
     @pyqtSlot()
-    def populate(self,parent):
+    def populate(self, parent):
         # print("Ocochodzi")
         # self.beginResetModel()
         # self.populate_recursively(self.root_node)
@@ -314,7 +316,6 @@ class FileSystemModel(QAbstractItemModel):
         self.beginResetModel()
         self.root_node = db.rebuild_file_system_model()
         self.endResetModel()
-
 
     def populate_recursively(self, parent_node):
         for child_entry in scandir(parent_node.path):

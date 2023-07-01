@@ -26,7 +26,7 @@ class DataBaseConnection:
         query = """
         CREATE TABLE IF NOT EXISTS file_system (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
+            name TEXT, 
             path TEXT,
             isCluster INTEGER,
             parent_id INTEGER,
@@ -56,27 +56,30 @@ class DataBaseConnection:
         self._store_node(root_node, parent_id=None)
         self.connection.commit()
 
+    ##Function use to load file_structure
     def rebuild_file_system_model(self):
         self.cursor.execute("SELECT * FROM file_system WHERE parent_id IS NULL")
         file_system_data = self.cursor.fetchone()
         root_node = self._rebuild_node(file_system_data)
         return root_node
 
+    ##Building a single node
     def _rebuild_node(self, data, parent_id=None, parent=None):
         from FileSystem import FileSystemNode
         node = None
+        ## check if data is not an image
         if not data[1].endswith("jpg"):
-            node = FileSystemNode(data[1], data[2], parent, data[3],data[5])
+            node = FileSystemNode(data[1], data[2], parent, data[3], data[5])
             node.id = data[0]
             query = "SELECT * FROM file_system WHERE parent_id = ?"
             self.cursor.execute(query, (data[0],))
             children_data = self.cursor.fetchall()
-
+            ## Recursivly build child nodes
             for child_data in children_data:
                 child_node = self._rebuild_node(child_data, data[0], node)
                 node.add_child(child_node)
         else:
-            node = FileSystemNode(data[1], data[2], parent, data[3],data[5])
+            node = FileSystemNode(data[1], data[2], parent, data[3], data[5])
             node.id = data[0]
 
         # Retrieve files within the current node (folder)
@@ -107,13 +110,16 @@ class DataBaseConnection:
 
         self.connection.commit()
 
+    ## Function used to Build Cluster in database Dont Touch (when i wrote this god and me know what's going on, now only god knows)
+    ## Na serio nie dotykac
     def cluster(self, parent_node: 'FileSystemNode', clusters: Dict[int, 'FileSystemNode'], cluster_number: int):
         start_time = time.time()
 
         # Check if there are clusters (entries with isCluster = 1 having parent_node as parent)
         parent_id = self.get_node_id_by_name(parent_node.name)
-        self.cursor.execute("SELECT id, name FROM file_system WHERE isCluster = 1 AND parent_id = ? AND (commited IS NULL OR commited <> 1)",
-                            (parent_id,))
+        self.cursor.execute(
+            "SELECT id, name FROM file_system WHERE isCluster = 1 AND parent_id = ? AND (commited IS NULL OR commited <> 1)",
+            (parent_id,))
         cluster_entries = self.cursor.fetchall()
 
         if cluster_entries:
@@ -136,6 +142,7 @@ class DataBaseConnection:
 
                     self.cursor.execute("UPDATE file SET parent_id = ? WHERE id = ?",
                                         (parent_id_, child_node.id))
+                    child_node.parent.id = parent_id_
             self.connection.commit()
 
             cluster_time = time.time() - start_time
@@ -154,10 +161,10 @@ class DataBaseConnection:
                     self.cursor.execute("INSERT INTO file (name, path, parent_id) VALUES (?, ?, ?)",
                                         (child_node.name, child_node.path, parent_id))
                 else:
-                    self.cursor.execute(
+                    iden = self.cursor.execute(
                         "INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
                         (child_node.name, child_node.path, 1, parent_id))
-
+                    child_node.id = iden
                 child_id = self.cursor.lastrowid
                 child_ids.append(child_id)
             self.connection.commit()
@@ -194,7 +201,13 @@ class DataBaseConnection:
         self.cursor.execute("UPDATE file_system set commited = 1 WHERE id = ?", (node.id,))
         self.connection.commit()
 
-    def deletefile(self,node:'FileSystemNode'):
+    ##Moves file to trash
+    def deletefile(self, node: 'FileSystemNode'):
         self.cursor.execute("select id from file_system where name = 'trash'")
         row = self.cursor.fetchone()
-        self.cursor.execute("update file set parent_id = ? where id = ? ",(row[0],node.id))
+        self.cursor.execute("update file set parent_id = ? where id = ? ", (row[0], node.id))
+        self.connection.commit()
+    def renamefile(self,name,id):
+        self.cursor.execute("update file_system set name = ? where id = ?",(name,id))
+        self.connection.commit()
+    #TODO write some util functions

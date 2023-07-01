@@ -1,10 +1,15 @@
 import os
-import sys
+
 from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex, QSize
 from PyQt5.QtGui import QPixmap, QFont, QFontMetrics
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QListView, QLabel, QStyledItemDelegate
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QVBoxLayout, QListView, QLabel, QStyledItemDelegate, QLineEdit, QDialog, QDialogButtonBox,
+    QHBoxLayout
+)
 import Configuration
-from typing import TYPE_CHECKING, Dict, Union, List
+from typing import TYPE_CHECKING
+
+from DataBase import DataBaseConnection
 
 if TYPE_CHECKING:
     from FileSystem import FileSystemNode
@@ -12,6 +17,7 @@ if TYPE_CHECKING:
 
 class CommitedFolderDelegate(QStyledItemDelegate):
     font = None
+
 
     def paint(self, painter, option, index):
         # Retrieve the data from the model
@@ -55,6 +61,60 @@ class CommitedFolderDelegate(QStyledItemDelegate):
         return size
 
 
+class NameInputDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Change Name")
+
+        self.layout = QVBoxLayout()
+
+        self.label = QLabel("New Name:")
+        self.layout.addWidget(self.label)
+
+        self.input_edit = QLineEdit()
+        self.layout.addWidget(self.input_edit)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        self.layout.addWidget(button_box)
+
+        self.setLayout(self.layout)
+
+    def get_new_name(self):
+        return self.input_edit.text()
+
+
+class CommitedFilesWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.layout = QVBoxLayout()
+        self.list_view = QListView()
+        self.model = CommitedFolderListModel()
+
+        self.list_view.setModel(self.model)
+        self.list_view.setItemDelegate(CommitedFolderDelegate())
+
+        self.list_view.doubleClicked.connect(self.open_name_dialog)
+
+        self.layout.addWidget(self.list_view)
+        self.setLayout(self.layout)
+
+    def open_name_dialog(self, index):
+        dialog = NameInputDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            new_name = dialog.get_new_name()
+            if new_name:
+                db = DataBaseConnection()
+                db.renamefile(new_name,index.data().id)
+                self.model.setData(index, new_name)
+
+    def add_commit(self, nodes: 'FileSystemNode'):
+        self.model.add_element(nodes)
+        self.model.layoutChanged.emit()
+
+
 class CommitedFolderListModel(QAbstractListModel):
     def __init__(self, data=None):
         super().__init__()
@@ -70,30 +130,14 @@ class CommitedFolderListModel(QAbstractListModel):
 
     def setData(self, index, value, role=Qt.EditRole):
         if role == Qt.EditRole:
-            self._data[index.row()] = value
+            element = self._data[index.row()]
+            element.name = value
             self.dataChanged.emit(index, index, [role])
             return True
         return False
 
+
     def add_element(self, element: 'FileSystemNode'):
-        print("siema")
-        element.commited=1
+        element.commited = 1
+        element.children = list(filter(lambda x: x.cluster == 0, element.children))
         self._data.append(element)
-
-
-class CommitedFilesWidget(QListView):
-    def __init__(self):
-        super().__init__()
-
-        model = CommitedFolderListModel()
-
-        # Create a QListView widget and set the model and item delegate
-        self.setModel(model)
-        self.setItemDelegate(CommitedFolderDelegate())
-
-    def add_commit(self, nodes: 'FileSystemNode'):
-        print("siema")
-        self.model().add_element(nodes)
-        self.model().layoutChanged.emit()
-
-
