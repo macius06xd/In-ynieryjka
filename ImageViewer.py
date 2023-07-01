@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt, QSize, QEvent, pyqtSignal, QModelIndex, QAbstractLi
     QDataStream, QIODevice, QVariant
 from PyQt5.QtGui import QPixmap, QImageReader, QStandardItem, QPen, QColor, QDrag
 from PyQt5.QtWidgets import (QListView, QAbstractItemView, QMessageBox,
-                             QStyle, QStyledItemDelegate)
+                             QStyle, QStyledItemDelegate, QWidget)
 
 import Configuration
 from Configuration import RESIZED_IMAGES_SIZE
@@ -250,7 +250,7 @@ class ImageDelegate(QStyledItemDelegate):
         pixmapitem = index.data()
         pixmap_width = pixmapitem.pixmap.width()
         pixmap_height = pixmapitem.pixmap.height()
-        return QSize(pixmap_width, pixmap_height)
+        return QSize(pixmap_width+8, pixmap_height+8)
 
     def flags(self, index):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled | Qt.ItemIsDragEnabled

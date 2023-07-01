@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 class CommitedFolderDelegate(QStyledItemDelegate):
     font = None
 
-
     def paint(self, painter, option, index):
         # Retrieve the data from the model
         element = index.data(Qt.DisplayRole)
@@ -107,7 +106,7 @@ class CommitedFilesWidget(QWidget):
             new_name = dialog.get_new_name()
             if new_name:
                 db = DataBaseConnection()
-                db.renamefile(new_name,index.data().id)
+                db.renamefile(new_name, index.data().id)
                 self.model.setData(index, new_name)
 
     def add_commit(self, nodes: 'FileSystemNode'):
@@ -135,7 +134,6 @@ class CommitedFolderListModel(QAbstractListModel):
             self.dataChanged.emit(index, index, [role])
             return True
         return False
-
 
     def add_element(self, element: 'FileSystemNode'):
         element.commited = 1
