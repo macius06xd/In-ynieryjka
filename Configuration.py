@@ -25,3 +25,5 @@ RESULTS_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\wyniki"
 
 #Size of images in pixels after resizing
 RESIZED_IMAGES_SIZE = 64
+
+time = 0

@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 from typing import List
 
@@ -52,9 +53,8 @@ class Cluster:
 
     def fit(self):
         start = time.time()
-        kmeans = KMeans(n_clusters=self.clusters)
+        kmeans = KMeans(n_clusters=self.clusters,init='k-means++', n_init=10, max_iter=300, tol=1e-4,algorithm='elkan', random_state=1)
         kmeans.fit(self.data_array)
-        print(f"Time of clusterization fit : {time.time() - start}")
         second_elements = [item[1] for item in self.data_list]
         item_clusters = kmeans.predict(second_elements)
         for item,  cluster in zip(self.data_list,item_clusters):

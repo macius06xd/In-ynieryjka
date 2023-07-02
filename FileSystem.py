@@ -6,6 +6,7 @@ from PyQt5.QtCore import QModelIndex, QDataStream, QIODevice, QMimeData, QByteAr
     pyqtSlot
 from PyQt5.QtWidgets import QTreeView, QVBoxLayout, QMenu, QAbstractItemView
 
+import Configuration
 import DataBase
 from Configuration import INITIAL_CLUSTERIZED_FOLDER
 
@@ -166,6 +167,7 @@ class FileSystem(QTreeView):
         print(f"File System Clusters : {time.time()-start}")
         self.db.cluster(node, map, cluster_number)
         self.model().layoutChanged.emit()
+        print(time.time() - Configuration.time)
         pass
 
 

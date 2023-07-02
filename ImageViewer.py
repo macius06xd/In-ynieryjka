@@ -1,3 +1,4 @@
+import time
 from array import array
 
 from PyQt5.QtCore import Qt, QSize, QEvent, pyqtSignal, QModelIndex, QAbstractListModel, QMimeData, QByteArray, \
@@ -47,6 +48,7 @@ class ImageViewer(QListView):
     # Clusterization Behaviour
     def slider_changed(self, value):
         # Todo
+        Configuration.time = time.time()
         from Clusterization import Cluster
         if self.dir.commited == 0:
             if self.cluster is None:
