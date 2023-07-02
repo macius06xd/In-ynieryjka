@@ -50,7 +50,7 @@ class ImageViewer(QListView):
         # Todo
         Configuration.time = time.time()
         from Clusterization import Cluster
-        if self.dir.commited == 0:
+        if self.dir.commited == 0 and not any(item.node.parent.commited == 1 for item in self.model().listdata):
             if self.cluster is None:
                 self.cluster = Cluster(self.model().listdata, value)
 
@@ -61,6 +61,10 @@ class ImageViewer(QListView):
         else:
             error_message = "Can't Cluster committed folder"
             QMessageBox.critical(self, "Error", error_message)
+            if self.dir.commited != 0:
+                print("Condition self.dir.commited == 0 failed")
+            else:
+                print("View Contain Commited Folder")
 
     # NOT USED DEPRECEATED (MOVING IMAGES)
     def manage_selection(self, selected, deselected):
@@ -275,7 +279,6 @@ class PixmapItem(QStandardItem):
         return self.pixmap
 
     def get_path(self):
-        print(self.path)
         return self.path
 
 

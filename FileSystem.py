@@ -1,5 +1,6 @@
 import os
 import time
+from functools import partial
 from typing import Iterable
 
 from PyQt5.QtCore import QModelIndex, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal, \
@@ -108,15 +109,14 @@ class FileSystem(QTreeView):
             menu = QMenu(self)
 
             commit_action = menu.addAction("Commit")
-            commit_action.triggered.connect(self.commitNode)
+            commit_action.triggered.connect(partial(self.commitNode,index))
 
             # Add other actions to the menu if needed
 
             menu.exec_(self.viewport().mapToGlobal(point))
 
-    def commitNode(self):
-        if self.current_index.isValid():
-            node = self.current_index.data(Qt.UserRole)
+    def commitNode(self,index):
+            node = index.data(Qt.UserRole)
             self.Node_Commited.emit(node)
             self.db.commit(node)
             self.model().layoutChanged.emit()
@@ -147,8 +147,11 @@ class FileSystem(QTreeView):
         map = {}
         node: FileSystemNode = dir
         dir_name = node.name
+        ready_clusters = [element for element in node.children if element.cluster and not element.commited]
+        for i,cluster in enumerate(ready_clusters):
+            map[i] = cluster
         if node is not None:
-            for i in range(0, cluster_number):
+            for i in range(len(ready_clusters), cluster_number):
                 cluster_node = FileSystemNode(dir_name + "-" + str(i), "-", node, True)
                 map[i] = cluster_node
                 node.add_child(cluster_node)
@@ -156,12 +159,10 @@ class FileSystem(QTreeView):
         for item in items:
             cluster = item.cluster
             if cluster is not None and 0 <= cluster < cluster_number:
-                name = os.path.basename(item.path)
-                node2: FileSystemNode = self.model().get_node_by_name(name)
-                new_nody = FileSystemNode(name, node2.path, map[item.cluster], False)
-                new_nody.id = node2.id
-                clusters[cluster].append(new_nody)
+                node2: FileSystemNode = item.node
                 node2.parent.remove_child(node2)
+                node2.parent = map[item.cluster]
+                clusters[cluster].append(node2)
         for i in range(0, cluster_number):
             map[i].add_child(clusters[i])
         print(f"File System Clusters : {time.time()-start}")
@@ -169,6 +170,7 @@ class FileSystem(QTreeView):
         self.model().layoutChanged.emit()
         print(time.time() - Configuration.time)
         pass
+
 
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
@@ -306,17 +308,17 @@ class FileSystemModel(QAbstractItemModel):
 
     @pyqtSlot()
     def populate(self, parent):
-        # print("Ocochodzi")
-        # self.beginResetModel()
-        # self.populate_recursively(self.root_node)
-        # self.endResetModel()
-        # db = DataBase.DataBaseConnection()
-        # db.build_database_(self.root_node)
-
-        db = DataBase.DataBaseConnection()
+        print("Ocochodzi")
         self.beginResetModel()
-        self.root_node = db.rebuild_file_system_model()
+        self.populate_recursively(self.root_node)
         self.endResetModel()
+        db = DataBase.DataBaseConnection()
+        db.build_database_(self.root_node)
+
+        # db = DataBase.DataBaseConnection()
+        # self.beginResetModel()
+        # self.root_node = db.rebuild_file_system_model()
+        # self.endResetModel()
 
     def populate_recursively(self, parent_node):
         for child_entry in scandir(parent_node.path):
