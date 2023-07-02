@@ -1,16 +1,14 @@
 import os
-import shutil
-from typing import List, Iterable, Union
+import time
+from typing import Iterable
 
-from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal, \
+from PyQt5.QtCore import QModelIndex, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal, \
     pyqtSlot
-from os import scandir
+from PyQt5.QtWidgets import QTreeView, QVBoxLayout, QMenu, QAbstractItemView
 
+import Configuration
 import DataBase
-from Configuration import RESIZED_IMAGES_PATH, INITIAL_CLUSTERIZED_FOLDER
-
-from PyQt5.QtWidgets import QTreeView, QWidget, QVBoxLayout, QMenu, QAbstractItemView
+from Configuration import INITIAL_CLUSTERIZED_FOLDER
 
 
 class FileSystemNode:
@@ -145,6 +143,7 @@ class FileSystem(QTreeView):
     ## jednak nie dziala ale nie wiem jak naprawic xd
     ## Problem jest taki że to ledwo działa
     def on_cluster(self, items: list, dir: QModelIndex, cluster_number):
+        start = time.time()
         map = {}
         node: FileSystemNode = dir
         dir_name = node.name
@@ -165,13 +164,15 @@ class FileSystem(QTreeView):
                 node2.parent.remove_child(node2)
         for i in range(0, cluster_number):
             map[i].add_child(clusters[i])
+        print(f"File System Clusters : {time.time()-start}")
         self.db.cluster(node, map, cluster_number)
         self.model().layoutChanged.emit()
+        print(time.time() - Configuration.time)
         pass
 
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
-from os import scandir, rename
+from os import scandir
 
 
 class FileSystemModel(QAbstractItemModel):

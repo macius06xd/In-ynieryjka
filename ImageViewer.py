@@ -1,10 +1,11 @@
+import time
 from array import array
 
 from PyQt5.QtCore import Qt, QSize, QEvent, pyqtSignal, QModelIndex, QAbstractListModel, QMimeData, QByteArray, \
     QDataStream, QIODevice, QVariant
 from PyQt5.QtGui import QPixmap, QImageReader, QStandardItem, QPen, QColor, QDrag
 from PyQt5.QtWidgets import (QListView, QAbstractItemView, QMessageBox,
-                             QStyle, QStyledItemDelegate)
+                             QStyle, QStyledItemDelegate, QWidget)
 
 import Configuration
 from Configuration import RESIZED_IMAGES_SIZE
@@ -47,6 +48,7 @@ class ImageViewer(QListView):
     # Clusterization Behaviour
     def slider_changed(self, value):
         # Todo
+        Configuration.time = time.time()
         from Clusterization import Cluster
         if self.dir.commited == 0:
             if self.cluster is None:
@@ -250,7 +252,7 @@ class ImageDelegate(QStyledItemDelegate):
         pixmapitem = index.data()
         pixmap_width = pixmapitem.pixmap.width()
         pixmap_height = pixmapitem.pixmap.height()
-        return QSize(pixmap_width, pixmap_height)
+        return QSize(pixmap_width+8, pixmap_height+8)
 
     def flags(self, index):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled | Qt.ItemIsDragEnabled

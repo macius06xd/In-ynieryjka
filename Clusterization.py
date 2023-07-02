@@ -1,4 +1,6 @@
 import os
+import sys
+import time
 from typing import List
 
 import h5py
@@ -28,12 +30,14 @@ class Cluster:
             self.perform()
         self.fit()
     def perform(self):
+        start = time.time()
         kmeans = KMeans(n_clusters=self.clusters)
 
         # Preallocate data_list
         self.data_list = [(None, None)] * len(self.items)
 
         for i, item in enumerate(self.items):
+
             file_path = item.get_path()
             file_name2, file_extension = os.path.splitext(os.path.basename(file_path))
             file_name2 = file_name2.replace("_small", "")
@@ -45,11 +49,14 @@ class Cluster:
 
         # Create a numpy array directly from data_list
         self.data_array = np.array([data for _, data in self.data_list], dtype='double')
+        print(f"Time of clusterization : {time.time() - start}")
 
     def fit(self):
-        kmeans = KMeans(n_clusters=self.clusters)
+        start = time.time()
+        kmeans = KMeans(n_clusters=self.clusters,init='k-means++', n_init=10, max_iter=300, tol=1e-4,algorithm='elkan', random_state=1)
         kmeans.fit(self.data_array)
-
-        for item, data in self.data_list:
-            # Convert data to dtype 'double' before predicting
-            item.cluster = kmeans.predict(data.astype('double').reshape(1, -1))[0]
+        second_elements = [item[1] for item in self.data_list]
+        item_clusters = kmeans.predict(second_elements)
+        for item,  cluster in zip(self.data_list,item_clusters):
+            item[0].cluster = cluster
+        print(f"Time of clusterization fit2 : {time.time() - start}")
