@@ -3,7 +3,7 @@ import sys
 from PyQt5.QtCore import Qt, QThread
 from PyQt5.QtWidgets import (QApplication, QSpacerItem, QSizePolicy, QFileSystemModel, QSplitter, QMainWindow, QWidget,
                              QVBoxLayout, QDesktopWidget, QMenuBar, QMenu, QAction,
-                             QProgressDialog, QSlider, QLabel, QInputDialog, QHBoxLayout)
+                             QProgressDialog, QSlider, QLabel, QInputDialog, QHBoxLayout, QMessageBox)
 
 from Configuration import *
 from CreateResizedDataset import ImageResizeThreadPool
@@ -38,7 +38,7 @@ class ImageBrowser(QMainWindow):
         self.splitter.addWidget(self.dir_tree)
         self.splitter.addWidget(self.image_list)
         self.splitter.addWidget(self.CommitedFilesWidget)
-        splittersize = self.splitter.size().width();
+        splittersize = self.splitter.size().width()
         self.splitter.setSizes([int(element * splittersize) for element in [0.05,0.9,0.05]])
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setMinimum(0)
@@ -59,16 +59,10 @@ class ImageBrowser(QMainWindow):
         self.dir_tree.Node_Commited.connect(self.CommitedFilesWidget.add_commit)
         self.slider.sliderReleased.connect(lambda: self.sliderValueChanged(self.slider.value()))
         self.slider.sliderReleased.connect(lambda: self.image_list.slider_changed(self.slider.value()))
+        
         # Create menu bar
         menu_bar = QMenuBar(self)
         options_menu = QMenu("&Options", self)
-
-        create_resized_action = QAction("Create resized dataset", self)
-        create_resized_action.triggered.connect(self.create_resized_dataset)
-
-        # Add new action for perform initial clusterization
-        initial_clusterization_action = QAction("Perform initial clusterization", self)
-        initial_clusterization_action.triggered.connect(self.prompt_for_cluster_count)
 
         # Add new action to apply changes and create result folder
         apply_changes_and_create_result_folder_action = QAction("Apply changes and create result folder", self)
@@ -77,14 +71,15 @@ class ImageBrowser(QMainWindow):
 
         self.image_list.node_changed_signal.connect(self.dir_tree.on_cluster)
         self.image_list.image_deleted.connect(self.dir_tree.on_deleted)
-        options_menu.addAction(create_resized_action)
-        options_menu.addAction(initial_clusterization_action)
         options_menu.addAction(apply_changes_and_create_result_folder_action)
 
         menu_bar.addMenu(options_menu)
         self.setMenuBar(menu_bar)
         self.dir_tree.commit()
         self.showFullScreen()
+
+        # Display "Prepare datasets" option window after program is run
+        self.display_options_window()
 
     def sliderValueChanged(self, value):
         self.sliderlabel.setText(f"Clusters: {value}")
@@ -94,6 +89,7 @@ class ImageBrowser(QMainWindow):
         output_folder = RESIZED_IMAGES_PATH
         max_threads = 12
         self.thread = QThread()
+
         # Instantiate the ImageResizeThreadPool class
         self.resize_threadpool = ImageResizeThreadPool(input_folder, output_folder, max_threads)
         self.resize_threadpool.moveToThread(self.thread)
@@ -106,7 +102,7 @@ class ImageBrowser(QMainWindow):
         progress_dialog.setMinimum(0)
         progress_dialog.setMaximum(100)
         progress_dialog.setAutoReset(True)
-        progress_dialog.setWindowTitle("Progress")
+        progress_dialog.setWindowTitle("Resizing images progress")
         progress_dialog.show()
 
         def workerfinishedhandler():
@@ -120,7 +116,7 @@ class ImageBrowser(QMainWindow):
         self.thread.start()
 
     def prompt_for_cluster_count(self):
-        cluster_count, ok_pressed = QInputDialog.getInt(self, "Get integer", "Number of Clusters:", 4, 0, 100, 1)
+        cluster_count, ok_pressed = QInputDialog.getInt(self, "Set number of clusters", "Number of Clusters:", 4, 0, 100, 1)
         if ok_pressed:
             self.perform_initial_clusterization(cluster_count)
 
@@ -131,13 +127,38 @@ class ImageBrowser(QMainWindow):
         progress_dialog.setMinimum(0)
         progress_dialog.setMaximum(100)
         progress_dialog.setAutoReset(True)
-        progress_dialog.setWindowTitle("Progress")
+        progress_dialog.setWindowTitle("Clustering progress")
         progress_dialog.show()
 
         self.thread = ClusteringThread(INITIAL_IMAGES_FOLDER, VECTORS_PATH, INITIAL_CLUSTERIZED_FOLDER, no_of_clusters)
         self.thread.progress_updated.connect(progress_dialog.setValue)
         self.thread.finished.connect(progress_dialog.close)
         self.thread.start()
+
+        #Poczekaj na zakonczenie wątku
+        #self.thread.wait()
+
+        while self.thread.isRunning():
+            QApplication.processEvents()
+
+        #Po zakonczeniu initial clusterization stworz resized dataset
+        self.create_resized_dataset()
+
+    def display_options_window(self):
+        options = QMessageBox()
+        options.setWindowTitle("Options")
+        options.setText("Choose an option:")
+        options.setStandardButtons(QMessageBox.Close)
+        options.setDefaultButton(QMessageBox.Close)
+
+        button_prepare_datasets = options.addButton("Prepare datasets", QMessageBox.ActionRole)
+
+        #prompt_for_cluster_count po pobraniu n uruchamia perform_initial_clusterization
+        #po zakonczeniu perform_initial_clusterization uruchamia sie create_resized_dataset
+        button_prepare_datasets.clicked.connect(self.prompt_for_cluster_count)
+
+        options.exec_()
+
 
 
 class ResizeThread(QThread):
