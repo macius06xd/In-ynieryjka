@@ -308,17 +308,17 @@ class FileSystemModel(QAbstractItemModel):
 
     @pyqtSlot()
     def populate(self, parent):
-        print("Ocochodzi")
-        self.beginResetModel()
-        self.populate_recursively(self.root_node)
-        self.endResetModel()
-        db = DataBase.DataBaseConnection()
-        db.build_database_(self.root_node)
-
-        # db = DataBase.DataBaseConnection()
+        # print("Ocochodzi")
         # self.beginResetModel()
-        # self.root_node = db.rebuild_file_system_model()
+        # self.populate_recursively(self.root_node)
         # self.endResetModel()
+        # db = DataBase.DataBaseConnection()
+        # db.build_database_(self.root_node)
+
+        db = DataBase.DataBaseConnection()
+        self.beginResetModel()
+        self.root_node = db.rebuild_file_system_model()
+        self.endResetModel()
 
     def populate_recursively(self, parent_node):
         for child_entry in scandir(parent_node.path):
