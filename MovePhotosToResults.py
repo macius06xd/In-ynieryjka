@@ -21,20 +21,22 @@ class FileManager:
 
             # Pobranie nazwy folderu
             cursor.execute("SELECT name FROM file_system WHERE id = ?", (parent_id,))
-            folder_name = cursor.fetchone()[0]
+            destination_folder_name = cursor.fetchone()[0]
 
-            # Skopiowanie pliku
-            source = os.path.join(INITIAL_IMAGES_FOLDER, name)
-            destination = ""
+            # Pelna sciezka pliku do skopiowania
+            source_file_path = os.path.join(INITIAL_IMAGES_FOLDER, name)
 
-            if "-" in folder_name:  # Format Cluster_X-Y
-                cluster_x, cluster_y = folder_name.split("-")
-                destination = os.path.join(RESULTS_PATH, cluster_x, folder_name)
-            else:  # Format Cluster_X
-                destination = os.path.join(RESULTS_PATH, folder_name)
-            
-            # Kopiowanie pliku
-            shutil.copy2(source, destination)
+            # Sciezka folderu w ktorym bedzie sie znajdowal plik
+            destination_folder_path = os.path.join(RESULTS_PATH, destination_folder_name)
+            # Pelna sciezka pliku pod ktorym bedzie sie znajdowal plik
+            destination_file_path = os.path.join(destination_folder_path, name)
+
+            if os.path.exists(destination_folder_path) and os.path.isdir(destination_folder_path):
+                #print("Folder istnieje, kopiuje plik.")
+                shutil.copy2(source_file_path, destination_file_path)
+            else:
+                pass
+                #print("Folder nie istnieje, plik nie zostanie skopiowany.")
 
         # Zamknięcie połączenia z bazą danych
         conn.close()
