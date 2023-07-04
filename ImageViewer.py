@@ -140,6 +140,7 @@ class ImageViewer(QListView):
 
     # Loading images when folder (File System is clicked)
     def load_images_from_folder(self, dir):
+        Configuration.time = time.time()
         self.model().listdata.clear()
         self.dir = dir.internalPointer()
         image_extensions = QImageReader.supportedImageFormats()
@@ -153,6 +154,8 @@ class ImageViewer(QListView):
             if file.cluster:
                 self.load_further(file)
         self.model().layoutChanged.emit()
+        print(f"Loading Data Time: {time.time() - Configuration.time}")
+
 
     # Recurssion for loading
     def load_further(self, dir):
@@ -219,14 +222,12 @@ class ImageDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         if not index.isValid():
             return
-        cluster = index.data(Qt.DisplayRole)
+        cluster_parent = index.data(Qt.DisplayRole).node.parent
         painter.save()
         # Fill the background with the appropriate color
         enlarged_rect = option.rect.adjusted(-8, -8, 8, 8)
-        if cluster is not None:
-            color = color_mapping.get(cluster.cluster,
-                                      QColor(0, 0, 0))  # Default to black if cluster value not found in mapping
-            painter.fillRect(enlarged_rect, color)
+        color = color_mapping[hash(id(cluster_parent)) % len(color_mapping)]
+        painter.fillRect(enlarged_rect, color)
 
         pixmap = index.data()
         # Draw the pixmap
@@ -275,7 +276,7 @@ class PixmapItem(QStandardItem):
         if role == Qt.UserRole:
             return self.get_path()
         if role == Qt.DisplayRole:
-            return self.cluster
+            return self
         return self.pixmap
 
     def get_path(self):

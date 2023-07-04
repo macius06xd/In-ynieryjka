@@ -1,16 +1,14 @@
-import math
 import os
+from typing import TYPE_CHECKING
 
-from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, QRect, QEvent
+from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, QRect
 from PyQt5.QtGui import QPixmap, QFont, QFontMetrics
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QListView, QLabel, QStyledItemDelegate, QLineEdit, QDialog, QDialogButtonBox,
-    QHBoxLayout, QPushButton, QGridLayout, QStyleOptionButton, QStyle
+    QPushButton, QGridLayout, QStyle
 )
 
 import Configuration
-from typing import TYPE_CHECKING
-
 from DataBase import DataBaseConnection
 
 if TYPE_CHECKING:
@@ -103,26 +101,97 @@ class CommitedFolderListModel(QAbstractListModel):
         self._data = data or []
 
     def rowCount(self, parent=QModelIndex()):
-        return len(self._data)
+        if parent.isValid():
+            element = parent.internalPointer()
+            if element.cluster:
+                return len(self.children())
+            else:
+                return 0
+        else:
+            return len(self._data)
 
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
-            element = self._data[index.row()]
-            return element
+            if index.isValid():
+                element = index.internalPointer()
+                return element
+            else:
+                return None
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if role == Qt.EditRole:
-            element = self._data[index.row()]
-            element.name = value
-            self.dataChanged.emit(index, index, [role])
-            return True
-        return False
+    def index(self, row, column, parent=QModelIndex()):
+        if parent.isValid():
+            element = parent.internalPointer()
+            if element.cluster and 0 <= row < len(element.children):
+                child = element.children[row]
+                return self.createIndex(row, column, child)
+            else:
+                return QModelIndex()
+        else:
+            if 0 <= row < len(self._data):
+                element = self._data[row]
+                return self.createIndex(row, column, element)
+            else:
+                return QModelIndex()
+
+    def parent(self, index):
+        if index.isValid():
+            element = index.internalPointer()
+            parent = element.parent
+            if parent is None:
+                return QModelIndex()
+            else:
+                grandparent = parent.parent
+                if grandparent is None:
+                    parent_index = self._data.index(parent)
+                    return self.createIndex(parent_index, 0, parent)
+                else:
+                    parent_index = grandparent.children.index(parent)
+                    return self.createIndex(parent_index, 0, parent)
+        else:
+            return QModelIndex()
 
     def add_element(self, element: 'FileSystemNode'):
         element.commited = 1
-        element.children = list(filter(lambda x: x.cluster == 0, element.children))
         self._data.append(element)
+        self.add_child_clusters(element)
 
+    def add_child_clusters(self, element: 'FileSystemNode', parent_index=QModelIndex()):
+        for child in element.children:
+            if child.cluster:
+                row = len(self._data)
+
+                self.beginInsertRows(parent_index, row, row)
+
+                child.commited = 1
+                self._data.append(child)
+
+                self.add_child_clusters(child, self.index(row, 0, parent_index))
+
+                self.endInsertRows()
+
+    def remove_element(self, element: 'FileSystemNode'):
+        if element not in self._data:
+            return
+
+        # Find the index of the element
+        index = self.index(self._data.index(element), 0, QModelIndex())
+
+        # Remove the element and its children clusters recursively
+        self.beginRemoveRows(index.parent(), index.row(), index.row() + self.count_child_clusters(element))
+
+        self.remove_child_clusters(element)
+
+        self._data.remove(element)
+
+        self.endRemoveRows()
+
+    def remove_child_clusters(self, element: 'FileSystemNode'):
+        children_clusters = [child for child in element.children if child.cluster]
+        for child in children_clusters:
+            self.remove_element(child)
+
+    def count_child_clusters(self, element: 'FileSystemNode') -> int:
+        return sum(1 for child in element.children if child.cluster)
 
 class CommitedFolderDelegate(QStyledItemDelegate):
     font = None
@@ -132,8 +201,13 @@ class CommitedFolderDelegate(QStyledItemDelegate):
         # Retrieve the data from the model
         element = index.data(Qt.DisplayRole)
         name = element.name
-        image_path = os.path.join(Configuration.RESIZED_IMAGES_PATH, element.children[0].name)
-        image = QPixmap(image_path)
+        try:
+            image_path = os.path.join(Configuration.RESIZED_IMAGES_PATH, element.children[0].name)
+            image = QPixmap(image_path)
+        except:
+            icon = QApplication.style().standardIcon(QStyle.SP_DialogOkButton)
+            image = icon.pixmap(Configuration.RESIZED_IMAGES_SIZE, Configuration.RESIZED_IMAGES_SIZE)
+
         if not self.grid_view:
             # Load the image
             # Draw the image
@@ -147,6 +221,12 @@ class CommitedFolderDelegate(QStyledItemDelegate):
             name_rect = option.rect.adjusted(image.width(), 0, 0, 0)
             painter.setFont(self.font)
             painter.drawText(name_rect, Qt.AlignVCenter, name)
+
+            # Draw child indicator
+            if element.parent and element.parent.commited:
+                indicator_rect = QRect(option.rect.x() + 5, option.rect.y() + 5, 10, 10)
+                painter.fillRect(indicator_rect, Qt.red)
+
         else:
             image = QPixmap(image_path)
             painter.drawPixmap(option.rect.x(), option.rect.y(), image)

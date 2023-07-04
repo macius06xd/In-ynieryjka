@@ -5,6 +5,7 @@ from typing import Iterable
 
 from PyQt5.QtCore import QModelIndex, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal, \
     pyqtSlot
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QTreeView, QVBoxLayout, QMenu, QAbstractItemView
 
 import Configuration
@@ -42,6 +43,24 @@ class FileSystemNode:
 
     def remove_child(self, child):
         self.children.remove(child)
+
+    def get_cluster_count(self):
+        count = 0
+        cluster_list = []
+
+        if self.cluster and self.children:
+            count += 1
+            cluster_list.append(self)
+
+        for child in self.children:
+            if child.children:
+                child_count, child_clusters = child.get_cluster_count()
+                count += child_count
+                cluster_list.extend(child_clusters)
+
+        return count, cluster_list
+
+
 
 
 class FileSystem(QTreeView):
@@ -116,9 +135,13 @@ class FileSystem(QTreeView):
             menu.exec_(self.viewport().mapToGlobal(point))
 
     def commitNode(self,index):
-            node = index.data(Qt.UserRole)
-            self.Node_Commited.emit(node)
+            node : FileSystemNode = index.data(Qt.UserRole)
+            node.cluster = True
+            count , childs = node.get_cluster_count()
+            for child in childs:
+                self.db.commit(child)
             self.db.commit(node)
+            self.Node_Commited.emit(node)
             self.model().layoutChanged.emit()
 
     def rowsInserted(self, parent: QModelIndex, first: int, last: int) -> None:
@@ -291,6 +314,10 @@ class FileSystemModel(QAbstractItemModel):
             return node.name
         elif role == Qt.UserRole:
             return node
+        elif role == Qt.TextColorRole:
+            if node.commited == 1:
+                # Set the text color to golden
+                return QColor("goldenrod")
 
     def removeRows(self, row, count, parent=QModelIndex()):
         if not parent.isValid():
@@ -336,15 +363,6 @@ class FileSystemModel(QAbstractItemModel):
     def rebuild_file_system_model(self):
         db = DataBase.DataBaseConnection()
         return db.rebuild_file_system_model('/')
-
-    def _rebuild_node(self, document):
-        node = FileSystemNode(document['name'], document['path'])
-        children_ids = document['children']
-        for child_id in children_ids:
-            child_document = self.get_document(child_id)
-            child_node = self._rebuild_node(child_document)
-            node.add_child(child_node)
-        return node
 
     def get_node_recursively(self, parent_node, name):
         if parent_node.name == name:
