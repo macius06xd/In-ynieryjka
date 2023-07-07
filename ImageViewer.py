@@ -100,7 +100,7 @@ class ImageViewer(QListView):
                             self.model().remove(file)
                         file.node.parent = selected_node
                     parent.clear_childs()
-                    selected_node.add_child(files)
+                    selected_node.add_child([element.node for element in files])
                     self.model().layoutChanged.emit()
                     self.file_system_changed.emit()
                     db = DataBaseConnection()

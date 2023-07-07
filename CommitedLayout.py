@@ -264,6 +264,8 @@ class CommitedFolderListModel(QAbstractListModel):
         children_clusters = [child for child in element.children if child.cluster]
         for child in children_clusters:
             child.commited = 0
+            db = DataBaseConnection()
+            db.unCommit(child)
             self.remove_element(child)
 
     def count_child_clusters(self, element: 'FileSystemNode') -> int:

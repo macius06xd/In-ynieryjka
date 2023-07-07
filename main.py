@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt, QThread
 from PyQt5.QtWidgets import (QApplication, QSpacerItem, QSizePolicy, QFileSystemModel, QSplitter, QMainWindow, QWidget,
                              QVBoxLayout, QDesktopWidget, QMenuBar, QMenu, QAction,
                              QProgressDialog, QSlider, QLabel, QInputDialog, QHBoxLayout, QMessageBox)
-
+import os
 from Configuration import *
 from CreateResizedDataset import ImageResizeThreadPool
 from CreateResultFolder import create_result_folders
@@ -16,7 +16,7 @@ from CommitedLayout import CommitedFilesWidget
 
 thumbnail_size = RESIZED_IMAGES_SIZE
 
-
+import subprocess
 class ImageBrowser(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -174,7 +174,12 @@ class ResizeThread(QThread):
 
 
 if __name__ == '__main__':
+
     app = QApplication(sys.argv)
     image_browser = ImageBrowser()
     image_browser.show()
-    sys.exit(app.exec_())
+
+
+
+    # Run the GUI loop
+    app.exec_()
