@@ -1,14 +1,16 @@
 import time
 from array import array
+from functools import partial
 
 from PyQt5.QtCore import Qt, QSize, QEvent, pyqtSignal, QModelIndex, QAbstractListModel, QMimeData, QByteArray, \
     QDataStream, QIODevice, QVariant
 from PyQt5.QtGui import QPixmap, QImageReader, QStandardItem, QPen, QColor, QDrag
 from PyQt5.QtWidgets import (QListView, QAbstractItemView, QMessageBox,
-                             QStyle, QStyledItemDelegate, QWidget)
+                             QStyle, QStyledItemDelegate, QWidget, QMenu, QAction, QInputDialog)
 
 import Configuration
 from Configuration import RESIZED_IMAGES_SIZE
+from DataBase import DataBaseConnection
 from FileSystem import FileSystemNode
 
 thumbnail_size = RESIZED_IMAGES_SIZE
@@ -18,6 +20,7 @@ import os
 class ImageViewer(QListView):
     node_changed_signal = pyqtSignal(list, FileSystemNode, int)
     image_deleted = pyqtSignal(str)
+    file_system_changed = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -35,7 +38,6 @@ class ImageViewer(QListView):
         self.setSelectionMode(QAbstractItemView.ContiguousSelection)
         self.setItemDelegate(ImageDelegate())
         self.selectionModel().selectionChanged.connect(self.manage_selection)
-        self.itemDelegate().imageClicked.connect(self.onImageClicked)
         self.ctrl_pressed = False
         self.setDragDropMode(QAbstractItemView.InternalMove)
         self.setDragEnabled(True)
@@ -44,12 +46,76 @@ class ImageViewer(QListView):
         self.image_loader_thread = None
         self.dir = None
         self.cluster = None
+        self.commitedLayout = None
+
+    def setCommitedLayout(self, layout):
+        self.commitedLayout = layout
+
+    def contextMenuEvent(self, event):
+        index = self.indexAt(event.pos())
+        if index.isValid():
+            menu = QMenu(self)
+
+            action1 = QAction("Delete", self)
+            action1.triggered.connect(partial(self.onImageClicked, index))  # Connect function to the action
+            menu.addAction(action1)
+
+            action2 = QAction("Combine with commit", self)
+            action2.triggered.connect(partial(self.clusterCombine, index))
+            menu.addAction(action2)
+            # Add more actions as needed
+
+            action = menu.exec_(self.mapToGlobal(event.pos()))
+            if action is not None:
+                # Handle the selected action
+                pass
+
+    def clusterCombine(self, index):
+        data = index.internalPointer()
+        parent = data.node.parent
+        items = self.commitedLayout.get_commited()
+
+        # Create a list of item names
+        item_names = [item.name for item in items]
+
+        # Add a cancel option to the list
+        item_names.append("Cancel")
+
+        # Show the input dialog menu
+        selected_item, ok = QInputDialog.getItem(self, "Choose Item", "Select an item:", item_names, editable=False)
+
+        # Check if the user made a selection or cancelled
+        if ok and selected_item:
+            if selected_item == "Cancel":
+                # User chose to cancel the operation
+                QMessageBox.information(self, "Cancel", "Operation cancelled.")
+            else:
+                # User selected an item
+                selected_node = next((item for item in items if item.name == selected_item), None)
+                if selected_node:
+                    files = [item for item in self.model().listdata if item.node.parent == parent]
+                    is_view = files[0].node.is_in_parent(self.dir)
+                    for file in files:
+                        if is_view:
+                            self.model().remove(file)
+                        file.node.parent = selected_node
+                    parent.clear_childs()
+                    selected_node.add_child(files)
+                    self.model().layoutChanged.emit()
+                    self.file_system_changed.emit()
+                    db = DataBaseConnection()
+                    db.update_parent(files,selected_node)
+
+        else:
+            # User cancelled the operation
+            QMessageBox.information(self, "Cancel", "Operation cancelled.")
 
     # Clusterization Behaviour
     def slider_changed(self, value):
         # Todo
         Configuration.time = time.time()
         from Clusterization import Cluster
+
         if self.dir.commited == 0 and not any(item.node.parent.commited == 1 for item in self.model().listdata):
             if self.cluster is None:
                 self.cluster = Cluster(self.model().listdata, value)
@@ -73,12 +139,11 @@ class ImageViewer(QListView):
         self.ctrl_pressed = False
         self.viewport().update()
 
-    def onImageClicked(self, imageId: int):
-        # TODO make it workd with item.node
-        node = self.model().getElementById(imageId)
-        self.model().remove(node)
+    def onImageClicked(self, node):
+        data = node.internalPointer()
+        self.model().remove(data)
         # change to signal later
-        self.image_deleted.emit(os.path.basename(node.path))
+        self.image_deleted.emit(os.path.basename(data.path))
         self.model().layoutChanged.emit()
 
     # NOT USED DEPRECEATED (MOVING IMAGES)
@@ -119,7 +184,6 @@ class ImageViewer(QListView):
     # NOT USED DEPRECEATED (MOVING IMAGES)
     def dragEnterEvent(self, event):
         event.accept()
-
     # NOT USED DEPRECEATED (MOVING IMAGES)
     def dragMoveEvent(self, event):
         event.acceptProposedAction()
@@ -155,7 +219,6 @@ class ImageViewer(QListView):
                 self.load_further(file)
         self.model().layoutChanged.emit()
         print(f"Loading Data Time: {time.time() - Configuration.time}")
-
 
     # Recurssion for loading
     def load_further(self, dir):
@@ -217,7 +280,6 @@ color_mapping = {
 
 
 class ImageDelegate(QStyledItemDelegate):
-    imageClicked = pyqtSignal(int)
 
     def paint(self, painter, option, index):
         if not index.isValid():
@@ -242,22 +304,11 @@ class ImageDelegate(QStyledItemDelegate):
 
         painter.restore()
 
-    def editorEvent(self, event, model, option, index):
-        if event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
-
-            return True
-
-        elif event.type() == QEvent.MouseButtonPress and event.button() == Qt.RightButton:
-            self.imageClicked.emit(index.data().node.id)
-            return True
-
-        return super().editorEvent(event, model, option, index)
-
     def sizeHint(self, option, index):
         pixmapitem = index.data()
         pixmap_width = pixmapitem.pixmap.width()
         pixmap_height = pixmapitem.pixmap.height()
-        return QSize(pixmap_width+8, pixmap_height+8)
+        return QSize(pixmap_width + 8, pixmap_height + 8)
 
     def flags(self, index):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled | Qt.ItemIsDragEnabled
@@ -291,6 +342,15 @@ class MyListModel(QAbstractListModel):
 
     def rowCount(self, parent=QModelIndex()):
         return len(self.listdata)
+
+    def index(self, row, column=0, parent=QModelIndex()):
+        if parent.isValid() and parent.column() != 0:
+            return QModelIndex()
+
+        if 0 <= row < self.rowCount(parent):
+            return self.createIndex(row, column, self.listdata[row])
+
+        return QModelIndex()
 
     def data(self, index, role):
         if index.isValid() and role == Qt.DisplayRole:

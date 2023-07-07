@@ -2,7 +2,7 @@ import os
 from functools import partial
 from typing import TYPE_CHECKING
 
-from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, QRect
+from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, QRect, pyqtSignal
 from PyQt5.QtGui import QPixmap, QFont, QFontMetrics
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QListView, QLabel, QStyledItemDelegate, QLineEdit, QDialog, QDialogButtonBox,
@@ -14,6 +14,7 @@ from DataBase import DataBaseConnection
 
 if TYPE_CHECKING:
     from FileSystem import FileSystemNode
+    from ImageViewer import PixmapItem
 
 
 
@@ -82,6 +83,11 @@ class CommitedFilesListView(QListView):
                 db.renamefile(new_name, index.data().id)
                 index.internalPointer().name = new_name
 
+    def get_commited(self):
+        return self.model().get_data()
+
+
+
 class CommitedFilesWidget(QWidget):
     def __init__(self):
         super().__init__()
@@ -133,12 +139,19 @@ class CommitedFilesWidget(QWidget):
         self.model.add_element(nodes)
         self.model.layoutChanged.emit()
 
+    def get_commited(self):
+        return self.list_view.get_commited()
+
+
+
+
 
 class CommitedFolderListModel(QAbstractListModel):
     def __init__(self, data=None):
         super().__init__()
         self._data = data or []
-
+    def get_data(self):
+        return self._data
     def rowCount(self, parent=QModelIndex()):
         if parent.isValid():
             element = parent.internalPointer()
@@ -250,6 +263,7 @@ class CommitedFolderListModel(QAbstractListModel):
     def remove_child_clusters(self, element: 'FileSystemNode'):
         children_clusters = [child for child in element.children if child.cluster]
         for child in children_clusters:
+            child.commited = 0
             self.remove_element(child)
 
     def count_child_clusters(self, element: 'FileSystemNode') -> int:
@@ -299,8 +313,12 @@ class CommitedFolderDelegate(QStyledItemDelegate):
         name = element.name
 
         # Load the image
-        image_path = os.path.join(Configuration.RESIZED_IMAGES_PATH, element.children[0].name)
-        image = QPixmap(image_path)
+        try:
+            image_path = os.path.join(Configuration.RESIZED_IMAGES_PATH, element.children[0].name)
+            image = QPixmap(image_path)
+        except:
+            icon = QApplication.style().standardIcon(QStyle.SP_DialogOkButton)
+            image = icon.pixmap(Configuration.RESIZED_IMAGES_SIZE, Configuration.RESIZED_IMAGES_SIZE)
         if( self.grid_view):
             return QSize(image.size())
         if self.font is None:

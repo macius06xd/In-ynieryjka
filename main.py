@@ -34,7 +34,7 @@ class ImageBrowser(QMainWindow):
         self.image_list = ImageViewer()
         self.dir_tree = FileSystem(self.image_list)
         self.CommitedFilesWidget = CommitedFilesWidget()
-
+        self.image_list.setCommitedLayout(self.CommitedFilesWidget)
         self.splitter.addWidget(self.dir_tree)
         self.splitter.addWidget(self.image_list)
         self.splitter.addWidget(self.CommitedFilesWidget)
@@ -57,6 +57,7 @@ class ImageBrowser(QMainWindow):
         main_widget.setLayout(window_layout)
         self.setCentralWidget(main_widget)
         self.dir_tree.Node_Commited.connect(self.CommitedFilesWidget.add_commit)
+        self.image_list.file_system_changed.connect(self.dir_tree.refresh)
         self.slider.sliderReleased.connect(lambda: self.sliderValueChanged(self.slider.value()))
         self.slider.sliderReleased.connect(lambda: self.image_list.slider_changed(self.slider.value()))
         

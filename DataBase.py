@@ -188,7 +188,9 @@ class DataBaseConnection:
 
             total_time = create_children_time + update_clusters_time
             print(f"Total Time: {total_time} seconds")
-
+    def delete_cluster(self,node):
+        self.cursor.execute("DELETE FROM file_system WHERE id = ?", (node.id,))
+        self.connection.commit()
     def get_node_id_by_name(self, name: str) -> int:
         self.cursor.execute("SELECT id FROM file_system WHERE name = ?", (name,))
         row = self.cursor.fetchone()
@@ -214,3 +216,7 @@ class DataBaseConnection:
         self.cursor.execute("update file_system set name = ? where id = ?",(name,id))
         self.connection.commit()
     #TODO write some util functions
+    def update_parent(self , file_list : list , node : 'FileSystemNode'):
+        for file in file_list:
+            self.cursor.execute("update file set parent_id = ? where id = ? " , (node.id,file.node.id))
+        self.connection.commit()

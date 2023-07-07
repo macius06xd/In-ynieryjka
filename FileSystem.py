@@ -22,6 +22,8 @@ class FileSystemNode:
         self.parent = parent
         self.children: list[FileSystemNode] = []
         self.cluster = cluster
+        if commited is None:
+            commited = False
         self.commited = commited
 
     def add_child(self, child):
@@ -42,7 +44,14 @@ class FileSystemNode:
         return 0
 
     def remove_child(self, child):
-        self.children.remove(child)
+        if isinstance(child, Iterable):
+            for c in child:
+                self.children.remove(c)
+        else:
+            self.children.remove(child)
+
+    def clear_childs(self):
+        self.children.clear()
 
     def get_cluster_count(self):
         count = 0
@@ -60,12 +69,19 @@ class FileSystemNode:
 
         return count, cluster_list
 
+    def is_in_parent(self,node):
+        if node.parent is None:
+            return False
+        if node == self.parent:
+            return True
+        return self.parent.is_in_parent(node)
 
 
 
 class FileSystem(QTreeView):
     Node_Commited = pyqtSignal(FileSystemNode)
-
+    def refresh(self):
+        self.model().layoutChanged.emit()
     def __init__(self, image_viewer, parent=None):
         super().__init__(parent)
         self.image_viewer = image_viewer
@@ -128,21 +144,21 @@ class FileSystem(QTreeView):
             menu = QMenu(self)
 
             commit_action = menu.addAction("Commit")
-            commit_action.triggered.connect(partial(self.commitNode,index))
+            commit_action.triggered.connect(partial(self.commitNode, index))
 
             # Add other actions to the menu if needed
 
             menu.exec_(self.viewport().mapToGlobal(point))
 
-    def commitNode(self,index):
-            node : FileSystemNode = index.data(Qt.UserRole)
-            node.cluster = True
-            count , childs = node.get_cluster_count()
-            for child in childs:
-                self.db.commit(child)
-            self.db.commit(node)
-            self.Node_Commited.emit(node)
-            self.model().layoutChanged.emit()
+    def commitNode(self, index):
+        node: FileSystemNode = index.data(Qt.UserRole)
+        node.cluster = True
+        count, childs = node.get_cluster_count()
+        for child in childs:
+            self.db.commit(child)
+        self.db.commit(node)
+        self.Node_Commited.emit(node)
+        self.model().layoutChanged.emit()
 
     def rowsInserted(self, parent: QModelIndex, first: int, last: int) -> None:
         print("dodaje")
@@ -171,7 +187,7 @@ class FileSystem(QTreeView):
         node: FileSystemNode = dir
         dir_name = node.name
         ready_clusters = [element for element in node.children if element.cluster and not element.commited]
-        for i,cluster in enumerate(ready_clusters):
+        for i, cluster in enumerate(ready_clusters):
             map[i] = cluster
         if node is not None:
             for i in range(len(ready_clusters), cluster_number):
@@ -188,11 +204,31 @@ class FileSystem(QTreeView):
                 clusters[cluster].append(node2)
         for i in range(0, cluster_number):
             map[i].add_child(clusters[i])
-        print(f"File System Clusters : {time.time()-start}")
+        print(f"File System Clusters : {time.time() - start}")
         self.db.cluster(node, map, cluster_number)
-        self.model().layoutChanged.emit()
         print(time.time() - Configuration.time)
+        self.delete_empty_clusters(dir)
+        self.model().layoutChanged.emit()
         pass
+    def delete_empty_clusters(self,dir):
+        child_clusters = [element for element in dir.children if element.cluster]
+        for child in child_clusters:
+            list = []
+            for inner_child in child.children:
+                if inner_child.cluster and inner_child.commited == 0:
+                    self.remove_recursion(inner_child)
+                    list.append(inner_child)
+            for i in list:
+                child.remove_child(i)
+    def remove_recursion(self,dir):
+        list = []
+        for inner_child in dir.children:
+            if inner_child.cluster and inner_child.commited == 0:
+                self.remove_recursion(inner_child)
+                list.append(inner_child)
+        for i in list:
+            dir.remove_child(i)
+        self.db.delete_cluster(dir)
 
 
 
