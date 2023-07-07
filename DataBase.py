@@ -200,6 +200,9 @@ class DataBaseConnection:
     def commit(self, node: 'FileSystemNode'):
         self.cursor.execute("UPDATE file_system set commited = 1 WHERE id = ?", (node.id,))
         self.connection.commit()
+    def unCommit(self, node: 'FileSystemNode'):
+        self.cursor.execute("UPDATE file_system set commited = 0 WHERE id = ?", (node.id,))
+        self.connection.commit()
 
     ##Moves file to trash
     def deletefile(self, node: 'FileSystemNode'):

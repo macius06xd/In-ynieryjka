@@ -1,11 +1,12 @@
 import os
+from functools import partial
 from typing import TYPE_CHECKING
 
 from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, QRect
 from PyQt5.QtGui import QPixmap, QFont, QFontMetrics
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QListView, QLabel, QStyledItemDelegate, QLineEdit, QDialog, QDialogButtonBox,
-    QPushButton, QGridLayout, QStyle
+    QPushButton, QGridLayout, QStyle, QMenu, QAction
 )
 
 import Configuration
@@ -40,6 +41,47 @@ class NameInputDialog(QDialog):
     def get_new_name(self):
         return self.input_edit.text()
 
+class CommitedFilesListView(QListView):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def contextMenuEvent(self, event):
+        index = self.indexAt(event.pos())
+        if index.isValid():
+            menu = QMenu(self)
+
+            action1 = QAction("Rename", self)
+            action1.triggered.connect(partial(self.rename,index))  # Connect function to the action
+            menu.addAction(action1)
+
+            action2 = QAction("uncommit", self)
+            action2.triggered.connect(partial(self.uncommit,index))  # Connect function to the action
+            menu.addAction(action2)
+
+            # Add more actions as needed
+
+            action = menu.exec_(self.mapToGlobal(event.pos()))
+            if action is not None:
+                # Handle the selected action
+                pass
+
+    def uncommit(self,index):
+        data = index.internalPointer()
+        data.commited = False
+        db = DataBaseConnection()
+        db.unCommit(data)
+        self.model().remove_element(data)
+        self.model().layoutChanged.emit()
+
+    def rename(self, index):
+        dialog = NameInputDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            new_name = dialog.get_new_name()
+            if new_name:
+                db = DataBaseConnection()
+                db.renamefile(new_name, index.data().id)
+                index.internalPointer().name = new_name
+
 class CommitedFilesWidget(QWidget):
     def __init__(self):
         super().__init__()
@@ -49,7 +91,7 @@ class CommitedFilesWidget(QWidget):
 
         self.layout = QGridLayout()
 
-        self.list_view = QListView()
+        self.list_view = CommitedFilesListView()
         self.list_view.setResizeMode(QListView.Adjust)
         self.list_view.setWordWrap(True)
         self.model = CommitedFolderListModel()
@@ -72,9 +114,6 @@ class CommitedFilesWidget(QWidget):
         self.setLayout(self.layout)
 
         self.is_grid_view = False
-
-
-
 
     def toggle_view(self):
         self.list_view.setViewMode(QListView.IconMode if self.grid_view_button.isChecked() else QListView.ListMode)
@@ -152,22 +191,45 @@ class CommitedFolderListModel(QAbstractListModel):
 
     def add_element(self, element: 'FileSystemNode'):
         element.commited = 1
-        self._data.append(element)
-        self.add_child_clusters(element)
+        if self.is_parent_commited(element):
+            if element in self._data:
+                self._data.remove(element)
+            index = self._data.find(element.parent)
+            self._data.insert(index+1,element)
+            self.add_child_clusters(element)
+        else:
+            if element in self._data:
+                self._data.remove(element)
+            self._data.append(element)
+            self.add_child_clusters(element)
+
+
+    def is_parent_commited(self,element: 'FileSystemNode'):
+        if element.parent is None:
+            return False
+        else:
+            return self.is_parent_commited(element.parent)
 
     def add_child_clusters(self, element: 'FileSystemNode', parent_index=QModelIndex()):
+
+        # Remove elements with the same parent from the list
+
         for child in element.children:
             if child.cluster:
-                row = len(self._data)
-
-                self.beginInsertRows(parent_index, row, row)
-
+                if child in self._data:
+                    self._data.remove(child)
+                parent_row = self._data.index(element)
+                row = parent_row + 1
                 child.commited = 1
-                self._data.append(child)
-
+                self._data.insert(row, child)
                 self.add_child_clusters(child, self.index(row, 0, parent_index))
+                parent_row += 1  # Increment parent_row to account for the added child
 
-                self.endInsertRows()
+    def remove_elements_with_parent(self, parent_element):
+        elements_to_remove = [element for element in self._data if element.parent.id == parent_element.id]
+
+        for element in elements_to_remove:
+            self.remove_element(element)
 
     def remove_element(self, element: 'FileSystemNode'):
         if element not in self._data:

@@ -116,7 +116,7 @@ class ImageBrowser(QMainWindow):
         self.thread.start()
 
     def prompt_for_cluster_count(self):
-        cluster_count, ok_pressed = QInputDialog.getInt(self, "Set number of clusters", "Number of Clusters:", 4, 0, 100, 1)
+        cluster_count, ok_pressed = QInputDialog.getInt(self, "Set number of clusters", "Number of Clusters:", 4, 0, 1000, 1)
         if ok_pressed:
             self.perform_initial_clusterization(cluster_count)
 
