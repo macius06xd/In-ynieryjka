@@ -13,6 +13,7 @@ from ImageViewer import ImageViewer
 from InitialClusterization import ClusteringThread
 from MovePhotosToResults import FileManager
 from CommitedLayout import CommitedFilesWidget
+from KMeansParamsWidget import KMeansParamsWidget
 
 thumbnail_size = RESIZED_IMAGES_SIZE
 
@@ -73,7 +74,10 @@ class ImageBrowser(QMainWindow):
         self.image_list.node_changed_signal.connect(self.dir_tree.on_cluster)
         self.image_list.image_deleted.connect(self.dir_tree.on_deleted)
         options_menu.addAction(apply_changes_and_create_result_folder_action)
-
+        # Add action to open K-means parameters dialog
+        open_kmeans_params_action = QAction("K-means Parameters", self)
+        open_kmeans_params_action.triggered.connect(self.open_kmeans_params_dialog)
+        options_menu.addAction(open_kmeans_params_action)
         menu_bar.addMenu(options_menu)
         self.setMenuBar(menu_bar)
         self.dir_tree.commit()
@@ -82,6 +86,10 @@ class ImageBrowser(QMainWindow):
         # Display "Prepare datasets" option window after program is run
         self.display_options_window()
 
+    def open_kmeans_params_dialog(self):
+        # Create and open the KMeansParamsWidget dialog
+        kmeans_params_dialog = KMeansParamsWidget()
+        kmeans_params_dialog.exec_()
     def sliderValueChanged(self, value):
         self.sliderlabel.setText(f"Clusters: {value}")
 

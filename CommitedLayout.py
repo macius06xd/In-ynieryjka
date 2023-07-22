@@ -17,8 +17,6 @@ if TYPE_CHECKING:
     from ImageViewer import PixmapItem
 
 
-
-
 class NameInputDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -42,6 +40,7 @@ class NameInputDialog(QDialog):
     def get_new_name(self):
         return self.input_edit.text()
 
+
 class CommitedFilesListView(QListView):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -52,11 +51,11 @@ class CommitedFilesListView(QListView):
             menu = QMenu(self)
 
             action1 = QAction("Rename", self)
-            action1.triggered.connect(partial(self.rename,index))  # Connect function to the action
+            action1.triggered.connect(partial(self.rename, index))  # Connect function to the action
             menu.addAction(action1)
 
             action2 = QAction("uncommit", self)
-            action2.triggered.connect(partial(self.uncommit,index))  # Connect function to the action
+            action2.triggered.connect(partial(self.uncommit, index))  # Connect function to the action
             menu.addAction(action2)
 
             # Add more actions as needed
@@ -66,7 +65,7 @@ class CommitedFilesListView(QListView):
                 # Handle the selected action
                 pass
 
-    def uncommit(self,index):
+    def uncommit(self, index):
         data = index.internalPointer()
         data.commited = False
         db = DataBaseConnection()
@@ -85,7 +84,6 @@ class CommitedFilesListView(QListView):
 
     def get_commited(self):
         return self.model().get_data()
-
 
 
 class CommitedFilesWidget(QWidget):
@@ -142,16 +140,18 @@ class CommitedFilesWidget(QWidget):
     def get_commited(self):
         return self.list_view.get_commited()
 
-
-
+    def un_commit(self, node: 'FileSystemNode'):
+        self.list_view.uncommit(node)
 
 
 class CommitedFolderListModel(QAbstractListModel):
     def __init__(self, data=None):
         super().__init__()
         self._data = data or []
+
     def get_data(self):
         return self._data
+
     def rowCount(self, parent=QModelIndex()):
         if parent.isValid():
             element = parent.internalPointer()
@@ -208,7 +208,7 @@ class CommitedFolderListModel(QAbstractListModel):
             if element in self._data:
                 self._data.remove(element)
             index = self._data.find(element.parent)
-            self._data.insert(index+1,element)
+            self._data.insert(index + 1, element)
             self.add_child_clusters(element)
         else:
             if element in self._data:
@@ -216,8 +216,7 @@ class CommitedFolderListModel(QAbstractListModel):
             self._data.append(element)
             self.add_child_clusters(element)
 
-
-    def is_parent_commited(self,element: 'FileSystemNode'):
+    def is_parent_commited(self, element: 'FileSystemNode'):
         if element.parent is None:
             return False
         else:
@@ -271,6 +270,7 @@ class CommitedFolderListModel(QAbstractListModel):
     def count_child_clusters(self, element: 'FileSystemNode') -> int:
         return sum(1 for child in element.children if child.cluster)
 
+
 class CommitedFolderDelegate(QStyledItemDelegate):
     font = None
     grid_view = False
@@ -321,7 +321,7 @@ class CommitedFolderDelegate(QStyledItemDelegate):
         except:
             icon = QApplication.style().standardIcon(QStyle.SP_DialogOkButton)
             image = icon.pixmap(Configuration.RESIZED_IMAGES_SIZE, Configuration.RESIZED_IMAGES_SIZE)
-        if( self.grid_view):
+        if (self.grid_view):
             return QSize(image.size())
         if self.font is None:
             self.font = QFont()

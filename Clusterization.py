@@ -7,7 +7,7 @@ import h5py
 import Configuration
 import numpy as np
 from sklearn.cluster import KMeans
-
+from KMeansParameters import KMeansParameters
 
 # Forward declaration of PixmapItem
 class PixmapItem:
@@ -32,7 +32,6 @@ class Cluster:
 
     def perform(self):
         start = time.time()
-        kmeans = KMeans(n_clusters=self.clusters)
 
         # Preallocate data_list
         self.data_list = [(None, None)] * len(self.items)
@@ -61,7 +60,15 @@ class Cluster:
 
     def fit(self):
         start = time.time()
-        kmeans = KMeans(n_clusters=self.clusters, init='k-means++', n_init=10, max_iter=300, tol=1e-4, random_state=1)
+        kmeans_params = KMeansParameters()
+        kmeans = KMeans(
+            n_clusters=self.clusters,
+            init=kmeans_params.init,
+            n_init=kmeans_params.n_init,
+            max_iter=kmeans_params.max_iter,
+            tol=kmeans_params.tol,
+            random_state=kmeans_params.random_state,
+        )
         kmeans.fit(self.data_array)
         second_elements = [item[1] for item in self.data_list]
         item_clusters = kmeans.predict(second_elements)

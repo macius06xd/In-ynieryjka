@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Dict
 
 if TYPE_CHECKING:
     from FileSystem import FileSystemNode
-
+from KMeansParameters import KMeansParameters
 
 class Mapper:
     pass
@@ -15,12 +15,15 @@ class Mapper:
 
 class DataBaseConnection:
     def __init__(self):
+        self.kmeans_params = KMeansParameters()
         self.db_path = os.path.join(Configuration.INITIAL_CLUSTERIZED_FOLDER, "Database.db")
         self.connection = sqlite3.connect(self.db_path)
         self.connection.execute("PRAGMA foreign_keys = 1")  # Enable foreign key support
         self.cursor = self.connection.cursor()
         self._create_file_system_table()
         self._create_file_table()
+        self._create_kmeans_parameters_table()
+
 
     def _create_file_system_table(self):
         query = """
@@ -58,11 +61,55 @@ class DataBaseConnection:
 
     ##Function use to load file_structure
     def rebuild_file_system_model(self):
+        self.load_kmeans_parameters()
         self.cursor.execute("SELECT * FROM file_system WHERE parent_id IS NULL")
         file_system_data = self.cursor.fetchone()
         root_node = self._rebuild_node(file_system_data)
         return root_node
 
+    def _create_kmeans_parameters_table(self):
+        query = """
+          CREATE TABLE IF NOT EXISTS kmeans_parameters (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              init TEXT,
+              n_init INTEGER,
+              max_iter INTEGER,
+              tol REAL,
+              random_state INTEGER,
+              precompute_distances INTEGER,
+              algorithm TEXT,
+              n_jobs INTEGER,
+              verbose INTEGER
+          );
+          """
+        self.cursor.execute(query)
+        self.connection.commit()
+
+    def load_kmeans_parameters(self):
+        self.cursor.execute("SELECT * FROM kmeans_parameters")
+        row = self.cursor.fetchone()
+        if row:
+            (id, init, n_init, max_iter, tol, random_state, precompute_distances, algorithm, n_jobs, verbose) = row
+            self.kmeans_params.init = init
+            self.kmeans_params.n_init = n_init
+            self.kmeans_params.max_iter = max_iter
+            self.kmeans_params.tol = tol
+            self.kmeans_params.random_state = random_state
+            self.kmeans_params.precompute_distances = precompute_distances
+            self.kmeans_params.algorithm = algorithm
+            self.kmeans_params.n_jobs = n_jobs
+            self.kmeans_params.verbose = verbose
+
+    def save_kmeans_parameters(self):
+        query = """
+           INSERT INTO kmeans_parameters (init, n_init, max_iter, tol, random_state, precompute_distances, algorithm, n_jobs, verbose)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+           """
+        self.cursor.execute(query, (self.kmeans_params.init, self.kmeans_params.n_init, self.kmeans_params.max_iter,
+                                    self.kmeans_params.tol, self.kmeans_params.random_state,
+                                    self.kmeans_params.precompute_distances, self.kmeans_params.algorithm,
+                                    self.kmeans_params.n_jobs, self.kmeans_params.verbose))
+        self.connection.commit()
     ##Building a single node
     def _rebuild_node(self, data, parent_id=None, parent=None):
         from FileSystem import FileSystemNode

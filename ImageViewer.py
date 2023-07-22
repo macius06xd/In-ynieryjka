@@ -76,7 +76,7 @@ class ImageViewer(QListView):
         items = self.commitedLayout.get_commited()
 
         # Create a list of item names
-        item_names = [item.name for item in items]
+        item_names = [item.name for item in items if item != parent]
 
         # Add a cancel option to the list
         item_names.append("Cancel")
@@ -91,6 +91,7 @@ class ImageViewer(QListView):
                 QMessageBox.information(self, "Cancel", "Operation cancelled.")
             else:
                 # User selected an item
+                self.commitedLayout.un_commit(parent)
                 selected_node = next((item for item in items if item.name == selected_item), None)
                 if selected_node:
                     files = [item for item in self.model().listdata if item.node.parent == parent]
