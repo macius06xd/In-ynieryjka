@@ -49,4 +49,3 @@ class ClusteringThread(QThread):
             count = count +1
             # Emit the progress signal
             self.progress_updated.emit(int(count/len(image_files)*100))
-

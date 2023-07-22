@@ -40,3 +40,10 @@ class FileManager:
 
         # Zamknięcie połączenia z bazą danych
         conn.close()
+
+        # Usuwanie pustych folderów w RESULTS_PATH
+        for root, dirs, files in os.walk(RESULTS_PATH, topdown=False):
+            for folder in dirs:
+                folder_path = os.path.join(root, folder)
+                if not os.listdir(folder_path):  # Jesli folder jest pusty
+                    os.rmdir(folder_path) # To go usun

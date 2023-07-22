@@ -10,6 +10,7 @@ from Configuration import RESIZED_IMAGES_SIZE
 
 class WorkerSignals(QObject):
     mem_signal = pyqtSignal(int)
+    
 class ImageResizeWorker(QRunnable):
     progress_update = pyqtSignal(int)  # Signal to update progress bar
 
@@ -72,6 +73,7 @@ class ImageResizeThreadPool (QThread):
 
         # Create the trash folder if it doesn't exist
         os.makedirs(trash_folder, exist_ok=True)
+        
         for subdir, dirs, files in os.walk(self.input_folder):
             for file in files:
                 input_path = os.path.join(subdir, file)

@@ -1,6 +1,7 @@
     # 1. folder with raw images - images in initial state, all in one folder
 INITIAL_IMAGES_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\klockitesty"
 #INITIAL_IMAGES_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\initial_images_folder"
+#INITIAL_IMAGES_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\caly_set_pomieszane"
 
     # 2.folder with raw images but after first, general clusterization
 INITIAL_CLUSTERIZED_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\pliczki"
@@ -21,6 +22,7 @@ VECTORS_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\xception2.hdf"
     # 6. path of directory with final results
 RESULTS_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\wyniki"
 #RESULTS_PATH = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\results_path"
+
 
 
 #Size of images in pixels after resizing
