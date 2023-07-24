@@ -24,9 +24,13 @@ klikam grid view i sie wywala
 
 _______________________________________________
 dziele jeden klaster na kilka dzieci
+
 commituję jedno z dzieci
+
 przełączam się na drugie z dzieci
+
 i robię combine with commit i wybieram tamto scommitowane dziecko
+
 ![image](https://github.com/macius06xd/In-ynieryjka/assets/80836050/d99dffb9-212f-407d-9319-edd3b4a0c376)
 
 
