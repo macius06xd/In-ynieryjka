@@ -66,7 +66,10 @@ class CommitedFilesListView(QListView):
                 pass
 
     def uncommit(self, index):
-        data = index.internalPointer()
+        if index is QModelIndex:
+            data = index.internalPointer()
+        else:
+            data = index
         data.commited = False
         db = DataBaseConnection()
         db.unCommit(data)

@@ -18,6 +18,8 @@ from KMeansParamsWidget import KMeansParamsWidget
 thumbnail_size = RESIZED_IMAGES_SIZE
 
 import subprocess
+
+
 class ImageBrowser(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -40,7 +42,7 @@ class ImageBrowser(QMainWindow):
         self.splitter.addWidget(self.image_list)
         self.splitter.addWidget(self.CommitedFilesWidget)
         splittersize = self.splitter.size().width()
-        self.splitter.setSizes([int(element * splittersize) for element in [0.05,0.9,0.05]])
+        self.splitter.setSizes([int(element * splittersize) for element in [0.05, 0.9, 0.05]])
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setMinimum(0)
         self.slider.setMaximum(10)
@@ -61,7 +63,7 @@ class ImageBrowser(QMainWindow):
         self.image_list.file_system_changed.connect(self.dir_tree.refresh)
         self.slider.sliderReleased.connect(lambda: self.sliderValueChanged(self.slider.value()))
         self.slider.sliderReleased.connect(lambda: self.image_list.slider_changed(self.slider.value()))
-        
+
         # Create menu bar
         menu_bar = QMenuBar(self)
         options_menu = QMenu("&Options", self)
@@ -90,6 +92,7 @@ class ImageBrowser(QMainWindow):
         # Create and open the KMeansParamsWidget dialog
         kmeans_params_dialog = KMeansParamsWidget()
         kmeans_params_dialog.exec_()
+
     def sliderValueChanged(self, value):
         self.sliderlabel.setText(f"Clusters: {value}")
 
@@ -125,7 +128,8 @@ class ImageBrowser(QMainWindow):
         self.thread.start()
 
     def prompt_for_cluster_count(self):
-        cluster_count, ok_pressed = QInputDialog.getInt(self, "Set number of clusters", "Number of Clusters:", 4, 0, 1000, 1)
+        cluster_count, ok_pressed = QInputDialog.getInt(self, "Set number of clusters", "Number of Clusters:", 4, 0,
+                                                        1000, 1)
         if ok_pressed:
             self.perform_initial_clusterization(cluster_count)
 
@@ -144,13 +148,13 @@ class ImageBrowser(QMainWindow):
         self.thread.finished.connect(progress_dialog.close)
         self.thread.start()
 
-        #Poczekaj na zakonczenie wątku
-        #self.thread.wait()
+        # Poczekaj na zakonczenie wątku
+        # self.thread.wait()
 
         while self.thread.isRunning():
             QApplication.processEvents()
 
-        #Po zakonczeniu initial clusterization stworz resized dataset
+        # Po zakonczeniu initial clusterization stworz resized dataset
         self.create_resized_dataset()
 
     def display_options_window(self):
@@ -162,12 +166,11 @@ class ImageBrowser(QMainWindow):
 
         button_prepare_datasets = options.addButton("Prepare datasets", QMessageBox.ActionRole)
 
-        #prompt_for_cluster_count po pobraniu n uruchamia perform_initial_clusterization
-        #po zakonczeniu perform_initial_clusterization uruchamia sie create_resized_dataset
+        # prompt_for_cluster_count po pobraniu n uruchamia perform_initial_clusterization
+        # po zakonczeniu perform_initial_clusterization uruchamia sie create_resized_dataset
         button_prepare_datasets.clicked.connect(self.prompt_for_cluster_count)
 
         options.exec_()
-
 
 
 class ResizeThread(QThread):
@@ -182,12 +185,9 @@ class ResizeThread(QThread):
 
 
 if __name__ == '__main__':
-
     app = QApplication(sys.argv)
     image_browser = ImageBrowser()
     image_browser.show()
-
-
 
     # Run the GUI loop
     app.exec_()
