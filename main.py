@@ -18,6 +18,7 @@ from KMeansParamsWidget import KMeansParamsWidget
 thumbnail_size = RESIZED_IMAGES_SIZE
 
 import subprocess
+import Configuration
 
 
 class ImageBrowser(QMainWindow):
@@ -27,6 +28,10 @@ class ImageBrowser(QMainWindow):
         self.initUI()
 
     def initUI(self):
+        # # Run initial configuration
+        self.display_options_window()
+        print("running for first time?", Configuration.is_it_run_first_time)
+
         self.setWindowTitle('Image Browser')
 
         main_widget = QWidget()
@@ -76,6 +81,7 @@ class ImageBrowser(QMainWindow):
         self.image_list.node_changed_signal.connect(self.dir_tree.on_cluster)
         self.image_list.image_deleted.connect(self.dir_tree.on_deleted)
         options_menu.addAction(apply_changes_and_create_result_folder_action)
+
         # Add action to open K-means parameters dialog
         open_kmeans_params_action = QAction("K-means Parameters", self)
         open_kmeans_params_action.triggered.connect(self.open_kmeans_params_dialog)
@@ -85,8 +91,9 @@ class ImageBrowser(QMainWindow):
         self.dir_tree.commit()
         self.showFullScreen()
 
-        # Display "Prepare datasets" option window after program is run
-        self.display_options_window()
+        if Configuration.is_it_run_first_time == 1:
+            self.prompt_for_cluster_count()
+            #print("running n prompt")
 
     def open_kmeans_params_dialog(self):
         # Create and open the KMeansParamsWidget dialog
@@ -158,19 +165,31 @@ class ImageBrowser(QMainWindow):
         self.create_resized_dataset()
 
     def display_options_window(self):
+        Configuration.is_it_run_first_time  # Deklaracja zmiennej globalnej is_it_run_first_time
+
         options = QMessageBox()
         options.setWindowTitle("Options")
         options.setText("Choose an option:")
-        options.setStandardButtons(QMessageBox.Close)
-        options.setDefaultButton(QMessageBox.Close)
 
         button_prepare_datasets = options.addButton("Prepare datasets", QMessageBox.ActionRole)
+        button_skip = options.addButton("Skip", QMessageBox.RejectRole)  # Dodano przycisk "Skip"
+        
+        options.setDefaultButton(button_skip)
 
         # prompt_for_cluster_count po pobraniu n uruchamia perform_initial_clusterization
         # po zakonczeniu perform_initial_clusterization uruchamia sie create_resized_dataset
-        button_prepare_datasets.clicked.connect(self.prompt_for_cluster_count)
+        #button_prepare_datasets.clicked.connect(self.prompt_for_cluster_count)
+        button_prepare_datasets.clicked.connect(self.set_is_it_run_first_time_one)  # Ustawia is_it_run_first_time na 1 po naciśnięciu przycisku "Prepare datasets"
+        button_skip.clicked.connect(self.set_is_it_run_first_time_zero)  # Ustawia is_it_run_first_time na 0 po naciśnięciu przycisku "Skip"
 
         options.exec_()
+
+
+    def set_is_it_run_first_time_one(self):
+        Configuration.is_it_run_first_time = 1
+
+    def set_is_it_run_first_time_zero(self):
+        Configuration.is_it_run_first_time = 0
 
 
 class ResizeThread(QThread):

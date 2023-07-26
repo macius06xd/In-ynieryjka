@@ -1,5 +1,6 @@
 import os
 import time
+import sys
 from functools import partial
 from typing import Iterable
 
@@ -374,17 +375,26 @@ class FileSystemModel(QAbstractItemModel):
 
     @pyqtSlot()
     def populate(self, parent):
-        print("Ocochodzi")
-        # self.beginResetModel()
-        # self.populate_recursively(self.root_node)
-        # self.endResetModel()
-        # db = DataBase.DataBaseConnection()
-        # db.build_database_(self.root_node)
+        # If dataset/database is already prepared application will just load it. Otherwise it will be created
+        if Configuration.is_it_run_first_time == 1: 
+            print("Creating database")
+            self.beginResetModel()
+            self.populate_recursively(self.root_node)
+            self.endResetModel()
+            db = DataBase.DataBaseConnection()
+            db.build_database_(self.root_node)
 
-        db = DataBase.DataBaseConnection()
-        self.beginResetModel()
-        self.root_node = db.rebuild_file_system_model()
-        self.endResetModel()
+        elif Configuration.is_it_run_first_time == 0:
+            print("Database exists")
+            db = DataBase.DataBaseConnection()
+            self.beginResetModel()
+            self.root_node = db.rebuild_file_system_model()
+            self.endResetModel()
+
+        else:
+            print("is_it_run_first_time value error, it should be either 0 or 1, but is:", Configuration.is_it_run_first_time)
+            sys.exit()
+
 
     def populate_recursively(self, parent_node):
         for child_entry in scandir(parent_node.path):
