@@ -211,6 +211,7 @@ class FileSystem(QTreeView):
         self.delete_empty_clusters(dir)
         self.model().layoutChanged.emit()
         pass
+
     def delete_empty_clusters(self,dir):
         child_clusters = [element for element in dir.children if element.cluster]
         for child in child_clusters:
@@ -221,6 +222,7 @@ class FileSystem(QTreeView):
                     list.append(inner_child)
             for i in list:
                 child.remove_child(i)
+                
     def remove_recursion(self,dir):
         list = []
         for inner_child in dir.children:

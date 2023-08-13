@@ -1,5 +1,22 @@
 # In-ynieryjka
 
+Odnośnie tego 
+
+Tam się w child_ids w DataBase.py wyczarowuje 1000, nie wiem skąd to jest tymczasowo dodałem że jeśli id = 1000 to nie wykonuje dalej nic
+
+Robie prepare datasets z domyslna liczba klastrów 4. Robię Cluster_2 na 4 klastry, robię Cluster_1 na 5 klastrów i dostaję to:
+
+Sprawdzalem czy to moje zmiany z brancha 26.07 to robia ale chyba nie bo na 22.07 tez taki blad dostaje
+
+![image](https://github.com/macius06xd/In-ynieryjka/assets/80836050/70c4ceeb-dc3a-4d3e-9afc-e59561c398a7)
+
+Jakis losowy shit, Cluster_2 na 4, Cluster_1 na 5, Cluster_0 na iles i Cluster_4 na iles i to
+
+![image](https://github.com/macius06xd/In-ynieryjka/assets/80836050/f1e5c76a-8fea-48db-b618-df52278334c8)
+
+
+_______________________________________________________
+Opis wykrywania czy wczytac czy stworzyc bazke
 
 w configuration dodalem zmienna globalna
 
@@ -14,10 +31,3 @@ I na podstawie tego w FileSystem robi co trzeba
 ![image](https://github.com/macius06xd/In-ynieryjka/assets/80836050/67937a2b-17bd-4a78-a66b-2da60309e7ce)
 
 I teraz pierwsze co sie dzieje to sie wyswietla okno czy Prepare datasets/Skip
-____________________________________________
-
-Taki blad podczas klasteryzowania ktoregos z kolei podstawowego klastra (jednego z tych stworzonych po wstepnej klasteryzacji)
-
-Nie wiem czy to moje zmiany spowodowaly jeszcze to przetestuje (mozesz w commit zerknac i zobaczyc co zmienilem i napisac co myslisz czy to przez to)
-
-![image](https://github.com/macius06xd/In-ynieryjka/assets/80836050/9482ffd3-cf2b-46a2-bd98-b682c8623f40)

@@ -59,7 +59,7 @@ class DataBaseConnection:
         self._store_node(root_node, parent_id=None)
         self.connection.commit()
 
-    ##Function use to load file_structure
+    # Function use to load file_structure
     def rebuild_file_system_model(self):
         self.load_kmeans_parameters()
         self.cursor.execute("SELECT * FROM file_system WHERE parent_id IS NULL")
@@ -110,18 +110,20 @@ class DataBaseConnection:
                                     self.kmeans_params.precompute_distances, self.kmeans_params.algorithm,
                                     self.kmeans_params.n_jobs, self.kmeans_params.verbose))
         self.connection.commit()
-    ##Building a single node
+    # Building a single node
     def _rebuild_node(self, data, parent_id=None, parent=None):
         from FileSystem import FileSystemNode
         node = None
-        ## check if data is not an image
+
+        # Check if data is not an image
         if not data[1].endswith("jpg"):
             node = FileSystemNode(data[1], data[2], parent, data[3], data[5])
             node.id = data[0]
             query = "SELECT * FROM file_system WHERE parent_id = ?"
             self.cursor.execute(query, (data[0],))
             children_data = self.cursor.fetchall()
-            ## Recursivly build child nodes
+
+            ## Recursively build child nodes
             for child_data in children_data:
                 child_node = self._rebuild_node(child_data, data[0], node)
                 node.add_child(child_node)
@@ -220,10 +222,24 @@ class DataBaseConnection:
 
             start_time = time.time()
 
+            # print("------------------------Clusters:")
+            # for key, cluster_node in clusters.items():
+            #     print(f"Key: {key}, Cluster Node ID: {cluster_node.id}, Cluster Node Name: {cluster_node.name}")
+
+            # print("\nChild IDs:")
+            # for id in child_ids:
+            #     print(id)
+            # print("-------------------------------")
+
             # Step 3: Update the parent for each child node to the correct cluster
             for cluster_id, cluster_node in clusters.items():
                 cluster_parent_id = child_ids[cluster_id]
                 cluster_node.id = cluster_parent_id
+
+                # coconut.jpg (widac to w zakomentowanych printach powyzej, pierwsza pozycja w child ids to czasami 1000)
+                if cluster_parent_id == 1000:
+                    continue
+
                 for child_node in cluster_node.children:
                     self.cursor.execute(
                         "UPDATE file SET parent_id = ? WHERE id = ?",
@@ -235,9 +251,11 @@ class DataBaseConnection:
 
             total_time = create_children_time + update_clusters_time
             print(f"Total Time: {total_time} seconds")
+
     def delete_cluster(self,node):
         self.cursor.execute("DELETE FROM file_system WHERE id = ?", (node.id,))
         self.connection.commit()
+
     def get_node_id_by_name(self, name: str) -> int:
         self.cursor.execute("SELECT id FROM file_system WHERE name = ?", (name,))
         row = self.cursor.fetchone()
@@ -249,19 +267,22 @@ class DataBaseConnection:
     def commit(self, node: 'FileSystemNode'):
         self.cursor.execute("UPDATE file_system set commited = 1 WHERE id = ?", (node.id,))
         self.connection.commit()
+
     def unCommit(self, node: 'FileSystemNode'):
         self.cursor.execute("UPDATE file_system set commited = 0 WHERE id = ?", (node.id,))
         self.connection.commit()
 
-    ##Moves file to trash
+    # Moves file to trash
     def deletefile(self, node: 'FileSystemNode'):
         self.cursor.execute("select id from file_system where name = 'trash'")
         row = self.cursor.fetchone()
         self.cursor.execute("update file set parent_id = ? where id = ? ", (row[0], node.id))
         self.connection.commit()
+
     def renamefile(self,name,id):
         self.cursor.execute("update file_system set name = ? where id = ?",(name,id))
         self.connection.commit()
+
     #TODO write some util functions
     def update_parent(self , file_list : list , node : 'FileSystemNode'):
         for file in file_list:

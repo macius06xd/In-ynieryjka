@@ -1,8 +1,8 @@
 import sys
 
 from PyQt5.QtCore import Qt, QThread
-from PyQt5.QtWidgets import (QApplication, QSpacerItem, QSizePolicy, QFileSystemModel, QSplitter, QMainWindow, QWidget,
-                             QVBoxLayout, QDesktopWidget, QMenuBar, QMenu, QAction,
+from PyQt5.QtWidgets import (QApplication, QSplitter, QMainWindow, QWidget,
+                             QVBoxLayout, QMenuBar, QMenu, QAction,
                              QProgressDialog, QSlider, QLabel, QInputDialog, QHBoxLayout, QMessageBox)
 import os
 from Configuration import *
@@ -17,9 +17,7 @@ from KMeansParamsWidget import KMeansParamsWidget
 
 thumbnail_size = RESIZED_IMAGES_SIZE
 
-import subprocess
 import Configuration
-
 
 class ImageBrowser(QMainWindow):
     def __init__(self):
@@ -28,7 +26,8 @@ class ImageBrowser(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        # # Run initial configuration
+
+        #Run initial configuration
         self.display_options_window()
         print("running for first time?", Configuration.is_it_run_first_time)
 
@@ -49,7 +48,7 @@ class ImageBrowser(QMainWindow):
         splittersize = self.splitter.size().width()
         self.splitter.setSizes([int(element * splittersize) for element in [0.05, 0.9, 0.05]])
         self.slider = QSlider(Qt.Horizontal)
-        self.slider.setMinimum(0)
+        self.slider.setMinimum(1)
         self.slider.setMaximum(10)
         self.sliderlabel = QLabel()
 
@@ -93,7 +92,6 @@ class ImageBrowser(QMainWindow):
 
         if Configuration.is_it_run_first_time == 1:
             self.prompt_for_cluster_count()
-            #print("running n prompt")
 
     def open_kmeans_params_dialog(self):
         # Create and open the KMeansParamsWidget dialog
@@ -154,9 +152,6 @@ class ImageBrowser(QMainWindow):
         self.thread.progress_updated.connect(progress_dialog.setValue)
         self.thread.finished.connect(progress_dialog.close)
         self.thread.start()
-
-        # Poczekaj na zakonczenie wątku
-        # self.thread.wait()
 
         while self.thread.isRunning():
             QApplication.processEvents()
