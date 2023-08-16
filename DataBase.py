@@ -222,28 +222,19 @@ class DataBaseConnection:
 
             start_time = time.time()
 
-            # print("------------------------Clusters:")
-            # for key, cluster_node in clusters.items():
-            #     print(f"Key: {key}, Cluster Node ID: {cluster_node.id}, Cluster Node Name: {cluster_node.name}")
-
-            # print("\nChild IDs:")
-            # for id in child_ids:
-            #     print(id)
-            # print("-------------------------------")
 
             # Step 3: Update the parent for each child node to the correct cluster
             for cluster_id, cluster_node in clusters.items():
                 cluster_parent_id = child_ids[cluster_id]
                 cluster_node.id = cluster_parent_id
 
-                # coconut.jpg (widac to w zakomentowanych printach powyzej, pierwsza pozycja w child ids to czasami 1000)
-                if cluster_parent_id == 1000:
-                    continue
-
                 for child_node in cluster_node.children:
-                    self.cursor.execute(
-                        "UPDATE file SET parent_id = ? WHERE id = ?",
-                        (cluster_parent_id, child_node.id))
+                    try :
+                        self.cursor.execute(
+                            "UPDATE file SET parent_id = ? WHERE id = ?",
+                            (cluster_parent_id, child_node.id))
+                    except:
+                        pass
 
             self.connection.commit()
             update_clusters_time = time.time() - start_time

@@ -51,7 +51,9 @@ class Cluster:
                 self.data_list[array_size] = (item, data)  # Store item-data pair in the preallocated list
                 array_size += 1
             else:
-                item.cluster = self.clusters+1
+                print("Brakuje vektorka")
+                print(file_name)
+                return
         self.data_list = self.data_list[:array_size]
         print(len(self.data_list))
         # Create a numpy array directly from data_list

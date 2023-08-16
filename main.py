@@ -1,5 +1,5 @@
 import sys
-
+import faulthandler
 from PyQt5.QtCore import Qt, QThread
 from PyQt5.QtWidgets import (QApplication, QSplitter, QMainWindow, QWidget,
                              QVBoxLayout, QMenuBar, QMenu, QAction,
@@ -199,6 +199,7 @@ class ResizeThread(QThread):
 
 
 if __name__ == '__main__':
+    faulthandler.enable()
     app = QApplication(sys.argv)
     image_browser = ImageBrowser()
     image_browser.show()

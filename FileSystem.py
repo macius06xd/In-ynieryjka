@@ -89,7 +89,8 @@ class FileSystem(QTreeView):
         self.clicked.connect(self.on_tree_clicked)
         model = FileSystemModel()
         self.setModel(model)
-        self.model().populate(self)
+        if Configuration.is_it_run_first_time == 0 :
+          self.model().populate(self)
         self.setModel(self.model())
         self.setIndentation(20)
         self.setSortingEnabled(True)
@@ -378,7 +379,8 @@ class FileSystemModel(QAbstractItemModel):
     @pyqtSlot()
     def populate(self, parent):
         # If dataset/database is already prepared application will just load it. Otherwise it will be created
-        if Configuration.is_it_run_first_time == 1: 
+        if Configuration.is_it_run_first_time == 1:
+            Configuration.is_it_run_first_time = 0
             print("Creating database")
             self.beginResetModel()
             self.populate_recursively(self.root_node)
