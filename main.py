@@ -2,7 +2,7 @@ import sys
 import faulthandler
 from PyQt5.QtCore import Qt, QThread
 from PyQt5.QtWidgets import (QApplication, QSplitter, QMainWindow, QWidget,
-                             QVBoxLayout, QMenuBar, QMenu, QAction,
+                             QVBoxLayout, QMenuBar, QMenu, QAction, QToolBar,
                              QProgressDialog, QSlider, QLabel, QInputDialog, QHBoxLayout, QMessageBox)
 import os
 from Configuration import *
@@ -14,6 +14,7 @@ from InitialClusterization import ClusteringThread
 from MovePhotosToResults import FileManager
 from CommitedLayout import CommitedFilesWidget
 from KMeansParamsWidget import KMeansParamsWidget
+from PyQt5.QtWidgets import QPushButton
 
 thumbnail_size = RESIZED_IMAGES_SIZE
 
@@ -87,6 +88,15 @@ class ImageBrowser(QMainWindow):
         options_menu.addAction(open_kmeans_params_action)
         menu_bar.addMenu(options_menu)
         self.setMenuBar(menu_bar)
+
+         # Add the Close button on the top right
+        self.tool_bar = QToolBar(self)
+        close_button = QPushButton("Close", self)
+        close_button.clicked.connect(self.close)
+        self.tool_bar.addWidget(close_button)
+        self.addToolBar(Qt.TopToolBarArea, self.tool_bar)
+        self.tool_bar.setLayoutDirection(Qt.RightToLeft)
+
         self.dir_tree.commit()
         self.showFullScreen()
 
