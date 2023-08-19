@@ -120,10 +120,12 @@ class ImageViewer(QListView):
         if self.dir.commited == 0 and not any(item.node.parent.commited == 1 for item in self.model().listdata):
             if self.cluster is None:
                 self.cluster = Cluster(self.model().listdata, value,self.onImageClicked)
+                self.model().lista_changed.connect(self.cluster.Reevaluate)
 
             self.cluster.set_clusters(value, self.model().listdata)
-            self.model().listdata = sorted(self.model().listdata, key=lambda x: x.cluster)
-            self.model().layoutChanged.emit()
+            if None not in [x.cluster for x in self.model().listdata]:
+                self.model().listdata = sorted(self.model().listdata, key=lambda x: x.cluster)
+                self.model().layoutChanged.emit()
             self.node_changed_signal.emit(self.model().listdata, self.dir, value)
         else:
             error_message = "Can't Cluster committed folder"
@@ -218,7 +220,7 @@ class ImageViewer(QListView):
                 pixmap = QPixmap(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
                 item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name), file)
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                self.model().listdata.append(item)
+                self.model().add(item)
             if file.cluster:
                 self.load_further(file)
         self.model().layoutChanged.emit()
@@ -234,12 +236,12 @@ class ImageViewer(QListView):
                     pixmap = QPixmap(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
                     item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name), file)
                     item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                    self.model().listdata.append(item)
+                    self.model().add(item)
                 if file.cluster:
                     self.load_further(file)
 
     def add_image(self, item):
-        self.model().listdata.append(item)
+        self.model().add(item)
 
     # NOT USED DEPRECEATED (MOVING IMAGES)
     def add_to_model(self, data):
@@ -339,6 +341,7 @@ class PixmapItem(QStandardItem):
 
 
 class MyListModel(QAbstractListModel):
+    lista_changed = pyqtSignal()
     def __init__(self, datain, parent=None, *args):
         QAbstractListModel.__init__(self, parent, *args)
         self.listdata: array = datain
@@ -403,4 +406,8 @@ class MyListModel(QAbstractListModel):
         return None
 
     def remove(self, item):
+        self.lista_changed.emit()
         self.listdata.remove(item)
+    def add(self,item):
+        self.lista_changed.emit()
+        self.listdata.append(item)

@@ -25,17 +25,24 @@ class Cluster:
         self.data_list = None
         self.broken_vectors = []
         self.remove_signal = remove_signal
+        self.error = False
+        self.rev = True
         self.perform()
         if len(self.broken_vectors) != 0:
             print("Ocochodzi")
             window = VectorFixWindow.FileActionWindow(self.broken_vectors,self.remove_signal,self.data_list)
             window.exec_()
-
+    def Reevaluate(self):
+        self.rev = True
     def set_clusters(self, clusters: int, items: List[PixmapItem]):
         self.clusters = clusters
-        if self.items != items:
+        if self.rev:
             self.items = items
             self.perform()
+            if len(self.broken_vectors) != 0:
+                print("Ocochodzi")
+                window = VectorFixWindow.FileActionWindow(self.broken_vectors, self.remove_signal, self.data_list)
+                window.exec_()
         self.fit()
 
     def perform(self):
@@ -60,6 +67,7 @@ class Cluster:
                 array_size += 1
             else:
                 print("Brakuje vektorka")
+                self.error = True
                 self.broken_vectors.append(item)
         self.data_list = self.data_list[:array_size]
         print(len(self.data_list))
@@ -78,9 +86,10 @@ class Cluster:
             tol=kmeans_params.tol,
             random_state=kmeans_params.random_state,
         )
-        kmeans.fit(self.data_array)
-        second_elements = [item[1] for item in self.data_list]
-        item_clusters = kmeans.predict(second_elements)
-        for item, cluster in zip(self.data_list, item_clusters):
-            item[0].cluster = cluster
+        if self.data_array.size != 0:
+            kmeans.fit(self.data_array)
+            second_elements = [item[1] for item in self.data_list]
+            item_clusters = kmeans.predict(second_elements)
+            for item, cluster in zip(self.data_list, item_clusters):
+                item[0].cluster = cluster
         print(f"Time of clusterization fit2 : {time.time() - start}")

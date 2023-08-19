@@ -28,6 +28,9 @@ class PixmapItemModel(QAbstractListModel):
         if role == Qt.EditRole:
             return self.items[index.row()]
 
+    def remove(self,item):
+        self.items.remove(item)
+
 class FileActionWindow(QDialog):
     def __init__(self, files, signal, vectors):
         super().__init__()
@@ -60,10 +63,11 @@ class FileActionWindow(QDialog):
 
     def perform_action1(self):
         selected_indexes = self.file_list_view.selectedIndexes()
-        for index in selected_indexes:
+        for index in reversed(selected_indexes):
             item = self.model.data(index,Qt.EditRole)
             self.signal(item)
-            self.model.removeRow(index.row())
+            self.model.remove(item)
+            self.model.layoutChanged.emit()
     def perform_action2(self):
         selected_indexes = self.file_list_view.selectedIndexes()
         data_vector = [item[1] for item in self.vectors]
