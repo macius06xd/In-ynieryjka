@@ -15,7 +15,7 @@ from FileSystem import FileSystemNode
 
 thumbnail_size = RESIZED_IMAGES_SIZE
 import os
-
+from PyQt5.QtGui import QPixmapCache
 
 class ImageViewer(QListView):
     node_changed_signal = pyqtSignal(list, FileSystemNode, int)
@@ -48,6 +48,11 @@ class ImageViewer(QListView):
         self.cluster = None
         self.commitedLayout = None
 
+    def manage_selection(self, selected, deselected):
+        selected_indexes = selected
+        self.selected_items = selected
+        self.ctrl_pressed = False
+        self.viewport().update()
     def setCommitedLayout(self, layout):
         self.commitedLayout = layout
 
@@ -135,13 +140,6 @@ class ImageViewer(QListView):
             else:
                 print("View Contain Commited Folder")
 
-    # NOT USED DEPRECEATED (MOVING IMAGES)
-    def manage_selection(self, selected, deselected):
-        selected_indexes = selected
-        self.selected_items = selected
-        self.ctrl_pressed = False
-        self.viewport().update()
-
     def onImageClicked(self, node):
         if not isinstance(node,PixmapItem):
          data = node.internalPointer()
@@ -152,62 +150,6 @@ class ImageViewer(QListView):
         self.image_deleted.emit(os.path.basename(data.path))
         self.model().layoutChanged.emit()
 
-    # NOT USED DEPRECEATED (MOVING IMAGES)
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton and event.modifiers() == Qt.ControlModifier:
-            self.ctrl_pressed = True
-            selected_indexes = self.selectionModel().selectedIndexes()
-            self.selected_items = [self.model().itemFromIndex(index) for index in selected_indexes]
-        else:
-            self.ctrl_pressed = False
-        super().mousePressEvent(event)
-
-    # NOT USED DEPRECEATED (MOVING IMAGES)
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.LeftButton and self.ctrl_pressed and self.selected_items:
-            mime_data = QMimeData()
-            paths = [item.get_path() for item in self.selected_items]
-            mime_data.setData("text/plain", "\n".join(paths).encode())
-            drag = QDrag(self)
-            drag.setMimeData(mime_data)
-
-            pixmap = QPixmap(self.selected_items[0].pixmap)
-            drag.setPixmap(pixmap)
-
-            # Get the bounding rectangle of the selected items
-            rect = self.visualRect(self.selectionModel().selection().indexes()[0])
-            for index in self.selectionModel().selection().indexes()[1:]:
-                rect = rect.united(self.visualRect(index))
-
-            # Calculate the offset from the mouse position to the top-left corner of the bounding rectangle
-            offset = event.pos() - rect.topLeft()
-
-            drag.setHotSpot(offset)
-
-            drag.exec_()
-        super().mouseMoveEvent(event)
-
-    # NOT USED DEPRECEATED (MOVING IMAGES)
-    def dragEnterEvent(self, event):
-        event.accept()
-    # NOT USED DEPRECEATED (MOVING IMAGES)
-    def dragMoveEvent(self, event):
-        event.acceptProposedAction()
-
-    # NOT USED DEPRECEATED (MOVING IMAGES)
-    def dropEvent(self, event):
-        print("elo23")
-        mime_data = event.mimeData()
-        event.setDropAction(Qt.CopyAction)
-        if mime_data.hasUrls():
-            urls = [url.toLocalFile() for url in mime_data.urls()]
-            self.add_to_model(urls)
-
-        elif mime_data.hasText():
-            paths = mime_data.text().split('\n')
-            self.add_to_model(paths)
-        event.acceptProposedAction()
-
     # Loading images when folder (File System is clicked)
     def load_images_from_folder(self, dir):
         Configuration.time = time.time()
@@ -217,8 +159,7 @@ class ImageViewer(QListView):
         for file in dir.data(Qt.UserRole).children:
             file_name = os.path.basename(file.path)
             if file_name.split('.')[-1].encode() in image_extensions:
-                pixmap = QPixmap(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
-                item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name), file)
+                item = PixmapItem(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name), file)
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.model().add(item)
             if file.cluster:
@@ -233,8 +174,8 @@ class ImageViewer(QListView):
             for file in dir.children:
                 file_name = os.path.basename(file.path)
                 if file_name.split('.')[-1].encode() in image_extensions:
-                    pixmap = QPixmap(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name))
-                    item = PixmapItem(pixmap, os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name), file)
+
+                    item = PixmapItem(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name), file)
                     item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                     self.model().add(item)
                 if file.cluster:
@@ -242,18 +183,6 @@ class ImageViewer(QListView):
 
     def add_image(self, item):
         self.model().add(item)
-
-    # NOT USED DEPRECEATED (MOVING IMAGES)
-    def add_to_model(self, data):
-        results = []
-
-        # iterate over paths and check if there is a matching item
-        for path in data:
-            if not any(item.path == path for item in self.model().listdata):
-                results.append(path)
-        for result in results:
-            self.model().listdata.append(PixmapItem(QPixmap(result), result))
-        self.model().layoutChanged.emit()
 
     def recive_notification_from_FileSystem(self, dir):
         self.load_images_from_folder(dir)
@@ -297,9 +226,9 @@ class ImageDelegate(QStyledItemDelegate):
         color = color_mapping[hash(id(cluster_parent)) % len(color_mapping)]
         painter.fillRect(enlarged_rect, color)
 
-        pixmap = index.data()
+        pixmap = index.data().get_image()
         # Draw the pixmap
-        painter.drawPixmap(option.rect.x(), option.rect.y(), pixmap.pixmap)
+        painter.drawPixmap(option.rect.x(), option.rect.y(), pixmap)
 
         # Check if the item is selected
         if option.state & QStyle.State_Selected:
@@ -312,8 +241,8 @@ class ImageDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option, index):
         pixmapitem = index.data()
-        pixmap_width = pixmapitem.pixmap.width()
-        pixmap_height = pixmapitem.pixmap.height()
+        pixmap_width = pixmapitem.get_image().width()
+        pixmap_height = pixmapitem.get_image().height()
         return QSize(pixmap_width + 8, pixmap_height + 8)
 
     def flags(self, index):
@@ -321,9 +250,8 @@ class ImageDelegate(QStyledItemDelegate):
 
 
 class PixmapItem(QStandardItem):
-    def __init__(self, pixmap, path, node, cluster=None):
+    def __init__(self, path, node, cluster=None):
         super().__init__()
-        self.pixmap = pixmap
         self.path = path
         self.node = node
         self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)  # make item selectable
@@ -334,10 +262,17 @@ class PixmapItem(QStandardItem):
             return self.get_path()
         if role == Qt.DisplayRole:
             return self
-        return self.pixmap
+        return QPixmap(self.get_path())
 
     def get_path(self):
         return self.path
+    def get_image(self):
+        if QPixmapCache.find(self.path):
+            return QPixmapCache.find(self.path)
+        else:
+            pixmap = QPixmap(self.path)
+            QPixmapCache.insert(self.path, pixmap)
+            return pixmap
 
 
 class MyListModel(QAbstractListModel):

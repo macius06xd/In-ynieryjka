@@ -37,6 +37,7 @@ class Cluster:
     def set_clusters(self, clusters: int, items: List[PixmapItem]):
         self.clusters = clusters
         if self.rev:
+            self.rev = False
             self.items = items
             self.perform()
             if len(self.broken_vectors) != 0:
@@ -75,8 +76,9 @@ class Cluster:
         print(f"Time of clusterization : {time.time() - start}")
 
     def fit(self):
-        self.data_array = np.array([data for _, data in self.data_list], dtype='double')
         start = time.time()
+        self.data_array = np.array([data for _, data in self.data_list], dtype='double')
+
         kmeans_params = KMeansParameters()
         kmeans = KMeans(
             n_clusters=self.clusters,
