@@ -7,6 +7,8 @@ import h5py
 import Configuration
 import numpy as np
 from sklearn.cluster import KMeans
+
+import VectorFixWindow
 from KMeansParameters import KMeansParameters
 
 # Forward declaration of PixmapItem
@@ -15,13 +17,19 @@ class PixmapItem:
 
 
 class Cluster:
-    def __init__(self, items: List[PixmapItem], clusters):
+    def __init__(self, items: List[PixmapItem], clusters,remove_signal):
         self.vector_file = h5py.File(Configuration.VECTORS_PATH, 'r')
         self.items = items
         self.clusters = clusters
         self.data_array = None
         self.data_list = None
+        self.broken_vectors = []
+        self.remove_signal = remove_signal
         self.perform()
+        if len(self.broken_vectors) != 0:
+            print("Ocochodzi")
+            window = VectorFixWindow.FileActionWindow(self.broken_vectors,self.remove_signal,self.data_list)
+            window.exec_()
 
     def set_clusters(self, clusters: int, items: List[PixmapItem]):
         self.clusters = clusters
@@ -32,7 +40,7 @@ class Cluster:
 
     def perform(self):
         start = time.time()
-
+        self.broken_vectors = []
         # Preallocate data_list
         self.data_list = [(None, None)] * len(self.items)
         array_size = 0
@@ -52,15 +60,14 @@ class Cluster:
                 array_size += 1
             else:
                 print("Brakuje vektorka")
-                print(file_name)
-                return
+                self.broken_vectors.append(item)
         self.data_list = self.data_list[:array_size]
         print(len(self.data_list))
         # Create a numpy array directly from data_list
-        self.data_array = np.array([data for _, data in self.data_list], dtype='double')
         print(f"Time of clusterization : {time.time() - start}")
 
     def fit(self):
+        self.data_array = np.array([data for _, data in self.data_list], dtype='double')
         start = time.time()
         kmeans_params = KMeansParameters()
         kmeans = KMeans(

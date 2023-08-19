@@ -234,7 +234,7 @@ class DataBaseConnection:
                             "UPDATE file SET parent_id = ? WHERE id = ?",
                             (cluster_parent_id, child_node.id))
                     except:
-                        pass
+                        print (child_node)
 
             self.connection.commit()
             update_clusters_time = time.time() - start_time
@@ -269,6 +269,8 @@ class DataBaseConnection:
         row = self.cursor.fetchone()
         self.cursor.execute("update file set parent_id = ? where id = ? ", (row[0], node.id))
         self.connection.commit()
+    def delete_pernaments(self, node: 'FileSystemNode'):
+        self.cursor.execute("delete file where id = ? ", node.id)
 
     def renamefile(self,name,id):
         self.cursor.execute("update file_system set name = ? where id = ?",(name,id))

@@ -119,7 +119,7 @@ class ImageViewer(QListView):
 
         if self.dir.commited == 0 and not any(item.node.parent.commited == 1 for item in self.model().listdata):
             if self.cluster is None:
-                self.cluster = Cluster(self.model().listdata, value)
+                self.cluster = Cluster(self.model().listdata, value,self.onImageClicked)
 
             self.cluster.set_clusters(value, self.model().listdata)
             self.model().listdata = sorted(self.model().listdata, key=lambda x: x.cluster)
@@ -141,7 +141,10 @@ class ImageViewer(QListView):
         self.viewport().update()
 
     def onImageClicked(self, node):
-        data = node.internalPointer()
+        if not isinstance(node,PixmapItem):
+         data = node.internalPointer()
+        else:
+            data = node
         self.model().remove(data)
         # change to signal later
         self.image_deleted.emit(os.path.basename(data.path))

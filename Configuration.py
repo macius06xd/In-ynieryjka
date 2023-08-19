@@ -29,4 +29,4 @@ RESIZED_IMAGES_SIZE = 64
 time = 0
 
 # Variable used to decide whether create or load database
-is_it_run_first_time = -1
+is_it_run_first_time = 0
