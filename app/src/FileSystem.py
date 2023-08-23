@@ -9,10 +9,9 @@ from PyQt5.QtCore import QModelIndex, QDataStream, QIODevice, QMimeData, QByteAr
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QTreeView, QVBoxLayout, QMenu, QAbstractItemView
 
-import Configuration
-import DataBase
-from Configuration import INITIAL_CLUSTERIZED_FOLDER
-
+from app.cfg.Configuration import INITIAL_CLUSTERIZED_FOLDER
+import app.cfg.Configuration
+import app.src.DataBase
 
 class FileSystemNode:
 
@@ -89,7 +88,7 @@ class FileSystem(QTreeView):
         self.clicked.connect(self.on_tree_clicked)
         model = FileSystemModel()
         self.setModel(model)
-        if Configuration.is_it_run_first_time == 0 :
+        if app.cfg.Configuration.is_it_run_first_time == 0 :
           self.model().populate(self)
         self.setModel(self.model())
         self.setIndentation(20)
@@ -109,7 +108,7 @@ class FileSystem(QTreeView):
         self.current_index = None
         layout = QVBoxLayout(self)
         layout.addWidget(self)
-        self.db = DataBase.DataBaseConnection()
+        self.db = app.src.DataBase.DataBaseConnection()
         self.setLayout(layout)
 
     def commit(self):
@@ -208,7 +207,7 @@ class FileSystem(QTreeView):
             map[i].add_child(clusters[i])
         print(f"File System Clusters : {time.time() - start}")
         self.db.cluster(node, map, cluster_number)
-        print(time.time() - Configuration.time)
+        print(time.time() - app.cfg.Configuration.time)
         self.delete_empty_clusters(dir)
         self.model().layoutChanged.emit()
         pass
@@ -379,24 +378,24 @@ class FileSystemModel(QAbstractItemModel):
     @pyqtSlot()
     def populate(self, parent):
         # If dataset/database is already prepared application will just load it. Otherwise it will be created
-        if Configuration.is_it_run_first_time == 1:
-            Configuration.is_it_run_first_time = 0
+        if app.cfg.Configuration.is_it_run_first_time == 1:
+            app.cfg.Configuration.is_it_run_first_time = 0
             print("Creating database")
             self.beginResetModel()
             self.populate_recursively(self.root_node)
             self.endResetModel()
-            db = DataBase.DataBaseConnection()
+            db = app.src.DataBase.DataBaseConnection()
             db.build_database_(self.root_node)
 
-        elif Configuration.is_it_run_first_time == 0:
+        elif app.cfg.Configuration.is_it_run_first_time == 0:
             print("Database exists")
-            db = DataBase.DataBaseConnection()
+            db = app.src.DataBase.DataBaseConnection()
             self.beginResetModel()
             self.root_node = db.rebuild_file_system_model()
             self.endResetModel()
 
         else:
-            print("is_it_run_first_time value error, it should be either 0 or 1, but is:", Configuration.is_it_run_first_time)
+            print("is_it_run_first_time value error, it should be either 0 or 1, but is:", app.cfg.Configuration.is_it_run_first_time)
             sys.exit()
 
 
@@ -414,7 +413,7 @@ class FileSystemModel(QAbstractItemModel):
         return self.get_node_recursively(self.root_node, name)
 
     def rebuild_file_system_model(self):
-        db = DataBase.DataBaseConnection()
+        db = app.src.DataBase.DataBaseConnection()
         return db.rebuild_file_system_model('/')
 
     def get_node_recursively(self, parent_node, name):

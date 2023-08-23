@@ -2,7 +2,7 @@ import sqlite3
 import os
 import shutil
 
-from Configuration import INITIAL_CLUSTERIZED_FOLDER, RESULTS_PATH, INITIAL_IMAGES_FOLDER
+from app.cfg.Configuration import *
 
 def create_result_folders():
 

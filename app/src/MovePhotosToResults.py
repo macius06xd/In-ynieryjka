@@ -2,7 +2,7 @@ import sqlite3
 import shutil
 import os
 
-from Configuration import INITIAL_CLUSTERIZED_FOLDER, RESULTS_PATH, INITIAL_IMAGES_FOLDER
+from app.cfg.Configuration import INITIAL_CLUSTERIZED_FOLDER, RESULTS_PATH, INITIAL_IMAGES_FOLDER
 
 class FileManager:
 

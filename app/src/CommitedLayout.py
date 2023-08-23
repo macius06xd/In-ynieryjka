@@ -9,12 +9,12 @@ from PyQt5.QtWidgets import (
     QPushButton, QGridLayout, QStyle, QMenu, QAction
 )
 
-import Configuration
-from DataBase import DataBaseConnection
+from app.cfg.Configuration import *
+from app.src.DataBase import DataBaseConnection
 
 if TYPE_CHECKING:
-    from FileSystem import FileSystemNode
-    from ImageViewer import PixmapItem
+    from app.src.FileSystem import FileSystemNode
+    from app.src.ImageViewer import PixmapItem
 
 
 class NameInputDialog(QDialog):
@@ -283,11 +283,11 @@ class CommitedFolderDelegate(QStyledItemDelegate):
         element = index.data(Qt.DisplayRole)
         name = element.name
         try:
-            image_path = os.path.join(Configuration.RESIZED_IMAGES_PATH, element.children[0].name)
+            image_path = os.path.join(RESIZED_IMAGES_PATH, element.children[0].name)
             image = QPixmap(image_path)
         except:
             icon = QApplication.style().standardIcon(QStyle.SP_DialogOkButton)
-            image = icon.pixmap(Configuration.RESIZED_IMAGES_SIZE, Configuration.RESIZED_IMAGES_SIZE)
+            image = icon.pixmap(RESIZED_IMAGES_SIZE, RESIZED_IMAGES_SIZE)
 
         if not self.grid_view:
             # Load the image
@@ -319,11 +319,11 @@ class CommitedFolderDelegate(QStyledItemDelegate):
 
         # Load the image
         try:
-            image_path = os.path.join(Configuration.RESIZED_IMAGES_PATH, element.children[0].name)
+            image_path = os.path.join(RESIZED_IMAGES_PATH, element.children[0].name)
             image = QPixmap(image_path)
         except:
             icon = QApplication.style().standardIcon(QStyle.SP_DialogOkButton)
-            image = icon.pixmap(Configuration.RESIZED_IMAGES_SIZE, Configuration.RESIZED_IMAGES_SIZE)
+            image = icon.pixmap(RESIZED_IMAGES_SIZE, RESIZED_IMAGES_SIZE)
         if (self.grid_view):
             return QSize(image.size())
         if self.font is None:

@@ -9,9 +9,9 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLi
 import sys
 from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QListWidget, QPushButton, QCheckBox
 
-import Configuration
-import FileSystem
-import ImageViewer
+import app.cfg.Configuration
+import app.src.FileSystem
+import app.src.ImageViewer
 
 
 class PixmapItemModel(QAbstractListModel):
@@ -75,7 +75,7 @@ class FileActionWindow(QDialog):
 
         for index in selected_indexes:
             item = self.model.data(index)
-            self.vector_file = h5py.File(Configuration.VECTORS_PATH, 'w')
+            self.vector_file = h5py.File(app.cfg.Configuration.VECTORS_PATH, 'w')
             name = item.text
             self.model.removeRow(index.row())
     def perform_action3(self):

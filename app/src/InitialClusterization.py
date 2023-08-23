@@ -5,7 +5,6 @@ from PyQt5.QtCore import pyqtSignal, QThread
 from sklearn.cluster import KMeans
 import h5py
 import numpy as np
-from Configuration import INITIAL_IMAGES_FOLDER, VECTORS_PATH, INITIAL_CLUSTERIZED_FOLDER
 
 def load_feature_vectors(vectors_path, image_files):
     with h5py.File(vectors_path, 'r') as f:

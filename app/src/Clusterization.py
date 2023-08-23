@@ -4,12 +4,12 @@ import time
 from typing import List
 
 import h5py
-import Configuration
+from app.cfg.Configuration import VECTORS_PATH
 import numpy as np
 from sklearn.cluster import KMeans
 
-import VectorFixWindow
-from KMeansParameters import KMeansParameters
+import app.src.VectorFixWindow
+from app.src.KMeansParameters import KMeansParameters
 
 # Forward declaration of PixmapItem
 class PixmapItem:
@@ -18,7 +18,7 @@ class PixmapItem:
 
 class Cluster:
     def __init__(self, items: List[PixmapItem], clusters,remove_signal):
-        self.vector_file = h5py.File(Configuration.VECTORS_PATH, 'r')
+        self.vector_file = h5py.File(VECTORS_PATH, 'r')
         self.items = items
         self.clusters = clusters
         self.data_array = None
@@ -30,7 +30,7 @@ class Cluster:
         self.perform()
         if len(self.broken_vectors) != 0:
             print("Ocochodzi")
-            window = VectorFixWindow.FileActionWindow(self.broken_vectors,self.remove_signal,self.data_list)
+            window = app.src.VectorFixWindow.FileActionWindow(self.broken_vectors,self.remove_signal,self.data_list)
             window.exec_()
     def Reevaluate(self):
         self.rev = True
@@ -42,7 +42,7 @@ class Cluster:
             self.perform()
             if len(self.broken_vectors) != 0:
                 print("Ocochodzi")
-                window = VectorFixWindow.FileActionWindow(self.broken_vectors, self.remove_signal, self.data_list)
+                window = app.src.VectorFixWindow.FileActionWindow(self.broken_vectors, self.remove_signal, self.data_list)
                 window.exec_()
         self.fit()
 

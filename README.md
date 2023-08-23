@@ -1,3 +1,6 @@
-# In-ynieryjka
+Aby uruchomić:
 
-Zacząłem coś z tymi wektorami ale jeszcze nie działa
+
+Wejdź do folderu In-ynieryjka
+
+`python -m app.src.main`

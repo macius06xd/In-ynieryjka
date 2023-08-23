@@ -3,8 +3,8 @@ from PyQt5.QtWidgets import (QDialog, QLabel, QSpinBox, QDoubleSpinBox, QCheckBo
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt, QSize
 
-import DataBase
-from KMeansParameters import KMeansParameters
+import app.src.DataBase
+from app.src.KMeansParameters import KMeansParameters
 import numpy as np
 
 class QuestionMarkWidget(QWidget):
@@ -135,7 +135,7 @@ class KMeansParamsWidget(QDialog):
         self.kmeans_params.verbose = verbose
 
         # You can add additional logic here, e.g., save the changes to a configuration file, etc.
-        db = DataBase.DataBaseConnection()
+        db = app.src.DataBase.DataBaseConnection()
         db.save_kmeans_parameters()
         # Close the dialog after applying changes
         self.close()

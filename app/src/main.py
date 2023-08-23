@@ -5,20 +5,20 @@ from PyQt5.QtWidgets import (QApplication, QSplitter, QMainWindow, QWidget,
                              QVBoxLayout, QMenuBar, QMenu, QAction, QToolBar,
                              QProgressDialog, QSlider, QLabel, QInputDialog, QHBoxLayout, QMessageBox)
 import os
-from Configuration import *
-from CreateResizedDataset import ImageResizeThreadPool
-from CreateResultFolder import create_result_folders
-from FileSystem import FileSystem
-from ImageViewer import ImageViewer
-from InitialClusterization import ClusteringThread
-from MovePhotosToResults import FileManager
-from CommitedLayout import CommitedFilesWidget
-from KMeansParamsWidget import KMeansParamsWidget
+import app.test.TestConfiguration
+import app.cfg.Configuration
+from app.cfg.Configuration import RESIZED_IMAGES_SIZE, INITIAL_CLUSTERIZED_FOLDER, RESIZED_IMAGES_PATH, INITIAL_IMAGES_FOLDER, VECTORS_PATH
+from app.src.CreateResizedDataset import ImageResizeThreadPool
+from app.src.CreateResultFolder import create_result_folders
+from app.src.FileSystem import FileSystem
+from app.src.ImageViewer import ImageViewer
+from app.src.InitialClusterization import ClusteringThread
+from app.src.MovePhotosToResults import FileManager
+from app.src.CommitedLayout import CommitedFilesWidget
+from app.src.KMeansParamsWidget import KMeansParamsWidget
 from PyQt5.QtWidgets import QPushButton
 
 thumbnail_size = RESIZED_IMAGES_SIZE
-
-import Configuration
 
 class ImageBrowser(QMainWindow):
     def __init__(self):
@@ -30,7 +30,7 @@ class ImageBrowser(QMainWindow):
 
         #Run initial configuration
         self.display_options_window()
-        print("running for first time?", Configuration.is_it_run_first_time)
+        print("running for first time?", app.cfg.Configuration.is_it_run_first_time)
 
         self.setWindowTitle('Image Browser')
 
@@ -100,7 +100,7 @@ class ImageBrowser(QMainWindow):
         self.dir_tree.commit()
         self.showFullScreen()
 
-        if Configuration.is_it_run_first_time == 1:
+        if app.cfg.Configuration.is_it_run_first_time == 1:
             self.prompt_for_cluster_count()
 
     def open_kmeans_params_dialog(self):
@@ -170,7 +170,7 @@ class ImageBrowser(QMainWindow):
         self.create_resized_dataset()
 
     def display_options_window(self):
-        Configuration.is_it_run_first_time  # Deklaracja zmiennej globalnej is_it_run_first_time
+        app.cfg.Configuration.is_it_run_first_time  # Deklaracja zmiennej globalnej is_it_run_first_time
 
         options = QMessageBox()
         options.setWindowTitle("Options")
@@ -191,10 +191,10 @@ class ImageBrowser(QMainWindow):
 
 
     def set_is_it_run_first_time_one(self):
-        Configuration.is_it_run_first_time = 1
+        app.cfg.Configuration.is_it_run_first_time = 1
 
     def set_is_it_run_first_time_zero(self):
-        Configuration.is_it_run_first_time = 0
+        app.cfg.Configuration.is_it_run_first_time = 0
 
 
 class ResizeThread(QThread):
@@ -209,10 +209,12 @@ class ResizeThread(QThread):
 
 
 if __name__ == '__main__':
+    app.test.TestConfiguration.check_paths_exist()
+    
     faulthandler.enable()
-    app = QApplication(sys.argv)
+    application = QApplication(sys.argv)
     image_browser = ImageBrowser()
     image_browser.show()
 
     # Run the GUI loop
-    app.exec_()
+    application.exec_()

@@ -8,10 +8,10 @@ from PyQt5.QtGui import QPixmap, QImageReader, QStandardItem, QPen, QColor, QDra
 from PyQt5.QtWidgets import (QListView, QAbstractItemView, QMessageBox,
                              QStyle, QStyledItemDelegate, QWidget, QMenu, QAction, QInputDialog)
 
-import Configuration
-from Configuration import RESIZED_IMAGES_SIZE
-from DataBase import DataBaseConnection
-from FileSystem import FileSystemNode
+import app.cfg.Configuration
+from app.cfg.Configuration import RESIZED_IMAGES_PATH, RESIZED_IMAGES_SIZE
+from app.src.DataBase import DataBaseConnection
+from app.src.FileSystem import FileSystemNode
 
 thumbnail_size = RESIZED_IMAGES_SIZE
 import os
@@ -119,8 +119,8 @@ class ImageViewer(QListView):
     # Clusterization Behaviour
     def slider_changed(self, value):
         # Todo
-        Configuration.time = time.time()
-        from Clusterization import Cluster
+        TIME = time.time()
+        from app.src.Clusterization import Cluster
 
         if self.dir.commited == 0 and not any(item.node.parent.commited == 1 for item in self.model().listdata):
             if self.cluster is None:
@@ -152,20 +152,20 @@ class ImageViewer(QListView):
 
     # Loading images when folder (File System is clicked)
     def load_images_from_folder(self, dir):
-        Configuration.time = time.time()
+        app.cfg.Configuration.time = time.time()
         self.model().listdata.clear()
         self.dir = dir.internalPointer()
         image_extensions = QImageReader.supportedImageFormats()
         for file in dir.data(Qt.UserRole).children:
             file_name = os.path.basename(file.path)
             if file_name.split('.')[-1].encode() in image_extensions:
-                item = PixmapItem(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name), file)
+                item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.model().add(item)
             if file.cluster:
                 self.load_further(file)
         self.model().layoutChanged.emit()
-        print(f"Loading Data Time: {time.time() - Configuration.time}")
+        print(f"Loading Data Time: {time.time() - app.cfg.Configuration.time}")
 
     # Recurssion for loading
     def load_further(self, dir):
@@ -175,7 +175,7 @@ class ImageViewer(QListView):
                 file_name = os.path.basename(file.path)
                 if file_name.split('.')[-1].encode() in image_extensions:
 
-                    item = PixmapItem(os.path.join(Configuration.RESIZED_IMAGES_PATH, file_name), file)
+                    item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)
                     item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                     self.model().add(item)
                 if file.cluster:

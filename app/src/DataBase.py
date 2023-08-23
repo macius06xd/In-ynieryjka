@@ -2,12 +2,13 @@ import os
 import sqlite3
 import time
 
-import Configuration
+import app.cfg.Configuration
+from app.cfg.Configuration import INITIAL_CLUSTERIZED_FOLDER
 from typing import TYPE_CHECKING, Dict
 
 if TYPE_CHECKING:
-    from FileSystem import FileSystemNode
-from KMeansParameters import KMeansParameters
+    from app.src.FileSystem import FileSystemNode
+from app.src.KMeansParameters import KMeansParameters
 
 class Mapper:
     pass
@@ -16,7 +17,7 @@ class Mapper:
 class DataBaseConnection:
     def __init__(self):
         self.kmeans_params = KMeansParameters()
-        self.db_path = os.path.join(Configuration.INITIAL_CLUSTERIZED_FOLDER, "Database.db")
+        self.db_path = os.path.join(INITIAL_CLUSTERIZED_FOLDER, "Database.db")
         self.connection = sqlite3.connect(self.db_path)
         self.connection.execute("PRAGMA foreign_keys = 1")  # Enable foreign key support
         self.cursor = self.connection.cursor()
@@ -112,7 +113,7 @@ class DataBaseConnection:
         self.connection.commit()
     # Building a single node
     def _rebuild_node(self, data, parent_id=None, parent=None):
-        from FileSystem import FileSystemNode
+        from app.src.FileSystem import FileSystemNode
         node = None
 
         # Check if data is not an image

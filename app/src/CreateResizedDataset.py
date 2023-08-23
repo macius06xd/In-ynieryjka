@@ -4,9 +4,7 @@ import numpy as np
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QThread, pyqtSlot  , Qt
 from PyQt5.QtWidgets import QApplication
 
-from Configuration import DEFAULT_IMAGES_PATH, INITIAL_CLUSTERIZED_FOLDER
-from Configuration import RESIZED_IMAGES_PATH
-from Configuration import RESIZED_IMAGES_SIZE
+from app.cfg.Configuration import *
 
 class WorkerSignals(QObject):
     mem_signal = pyqtSignal(int)
