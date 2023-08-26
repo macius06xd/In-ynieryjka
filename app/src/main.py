@@ -69,33 +69,34 @@ class ImageBrowser(QMainWindow):
         self.slider.sliderReleased.connect(lambda: self.sliderValueChanged(self.slider.value()))
         self.slider.sliderReleased.connect(lambda: self.image_list.slider_changed(self.slider.value()))
 
-        # Create menu bar
-        menu_bar = QMenuBar(self)
-        options_menu = QMenu("&Options", self)
+        self.image_list.node_changed_signal.connect(self.dir_tree.on_cluster)
+        self.image_list.image_deleted.connect(self.dir_tree.on_deleted)
+
+        ##################### TOOL BAR - START #######################
+        #Set tool bar
+        self.tool_bar = QToolBar(self)
+
+        # Add the "Close" button
+        close_button = QPushButton("Close", self)
+        close_button.clicked.connect(self.close)
+        self.tool_bar.addWidget(close_button)
+
 
         # Add new action to apply changes and create result folder
         apply_changes_and_create_result_folder_action = QAction("Apply changes and create result folder", self)
         apply_changes_and_create_result_folder_action.triggered.connect(create_result_folders)
         apply_changes_and_create_result_folder_action.triggered.connect(FileManager.copy_files)
 
-        self.image_list.node_changed_signal.connect(self.dir_tree.on_cluster)
-        self.image_list.image_deleted.connect(self.dir_tree.on_deleted)
-        options_menu.addAction(apply_changes_and_create_result_folder_action)
+        # Add the "Apply changes and create result" button
+        create_results_button = QPushButton("Apply changes and create result folders", self)
+        create_results_button.clicked.connect(apply_changes_and_create_result_folder_action.trigger)
+        create_results_button.move(50, 0)
+        self.tool_bar.addWidget(create_results_button)
+        
 
-        # Add action to open K-means parameters dialog
-        open_kmeans_params_action = QAction("K-means Parameters", self)
-        open_kmeans_params_action.triggered.connect(self.open_kmeans_params_dialog)
-        options_menu.addAction(open_kmeans_params_action)
-        menu_bar.addMenu(options_menu)
-        self.setMenuBar(menu_bar)
-
-         # Add the Close button on the top right
-        self.tool_bar = QToolBar(self)
-        close_button = QPushButton("Close", self)
-        close_button.clicked.connect(self.close)
-        self.tool_bar.addWidget(close_button)
         self.addToolBar(Qt.TopToolBarArea, self.tool_bar)
         self.tool_bar.setLayoutDirection(Qt.RightToLeft)
+        ##################### TOOL BAR - END #######################
 
         self.dir_tree.commit()
         self.showFullScreen()
@@ -185,6 +186,7 @@ class ImageBrowser(QMainWindow):
         # po zakonczeniu perform_initial_clusterization uruchamia sie create_resized_dataset
         #button_prepare_datasets.clicked.connect(self.prompt_for_cluster_count)
         button_prepare_datasets.clicked.connect(self.set_is_it_run_first_time_one)  # Ustawia is_it_run_first_time na 1 po naciśnięciu przycisku "Prepare datasets"
+        button_prepare_datasets.clicked.connect(self.open_kmeans_params_dialog)
         button_skip.clicked.connect(self.set_is_it_run_first_time_zero)  # Ustawia is_it_run_first_time na 0 po naciśnięciu przycisku "Skip"
 
         options.exec_()
@@ -209,6 +211,7 @@ class ResizeThread(QThread):
 
 
 if __name__ == '__main__':
+    #Test whether paths exists
     app.test.TestConfiguration.check_paths_exist()
     
     faulthandler.enable()

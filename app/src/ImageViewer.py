@@ -9,11 +9,11 @@ from PyQt5.QtWidgets import (QListView, QAbstractItemView, QMessageBox,
                              QStyle, QStyledItemDelegate, QWidget, QMenu, QAction, QInputDialog)
 
 import app.cfg.Configuration
-from app.cfg.Configuration import RESIZED_IMAGES_PATH, RESIZED_IMAGES_SIZE
+from app.cfg.Configuration import RESIZED_IMAGES_PATH
 from app.src.DataBase import DataBaseConnection
 from app.src.FileSystem import FileSystemNode
 
-thumbnail_size = RESIZED_IMAGES_SIZE
+thumbnail_size = app.cfg.Configuration.RESIZED_IMAGES_SIZE
 import os
 from PyQt5.QtGui import QPixmapCache
 
