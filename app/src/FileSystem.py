@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import sys
 from functools import partial
@@ -6,7 +7,7 @@ from typing import Iterable
 
 from PyQt5.QtCore import QModelIndex, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal, \
     pyqtSlot
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import QTreeView, QVBoxLayout, QMenu, QAbstractItemView
 
 from app.cfg.Configuration import INITIAL_CLUSTERIZED_FOLDER
@@ -356,10 +357,18 @@ class FileSystemModel(QAbstractItemModel):
                 return f"{name} ({count})"
         elif role == Qt.UserRole:
             return node
-        elif role == Qt.TextColorRole:
+        elif role == Qt.FontRole:
             if node.commited == 1:
-                # Set the text color to golden
-                return QColor("goldenrod")
+                font = QFont()
+                font.setBold(True)
+                return font
+        elif role == Qt.ForegroundRole:
+        # Specify correct color based on the number after last - in the name
+            match = re.search(r'-(\d+)$', node.name)
+            if match:
+                index = int(match.group(1))
+                if index < len(app.cfg.Configuration.color_mapping):
+                    return app.cfg.Configuration.color_mapping[index]
 
     def removeRows(self, row, count, parent=QModelIndex()):
         if not parent.isValid():

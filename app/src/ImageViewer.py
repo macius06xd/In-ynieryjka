@@ -1,4 +1,5 @@
 import time
+import re
 from array import array
 from functools import partial
 
@@ -119,7 +120,7 @@ class ImageViewer(QListView):
     # Clusterization Behaviour
     def slider_changed(self, value):
         # Todo
-        TIME = time.time()
+        app.cfg.Configuration.time = time.time()
         from app.src.Clusterization import Cluster
 
         if self.dir.commited == 0 and not any(item.node.parent.commited == 1 for item in self.model().listdata):
@@ -197,33 +198,28 @@ class ImageViewer(QListView):
             i = i + 1
         self.model().layoutChanged.emit()
 
-
-color_mapping = {
-    0: QColor(255, 0, 0),
-    1: QColor(0, 255, 0),
-    2: QColor(0, 0, 255),
-    3: QColor(0, 125, 0),
-    4: QColor(0, 125, 125),
-    5: QColor(125, 125, 0),
-    6: QColor(255, 255, 0),
-    7: QColor(0, 255, 255),
-    8: QColor(255, 125, 0),
-    9: QColor(0, 125, 255),
-    10: QColor(255, 125, 255),
-    # Add more cluster-color mappings as needed
-}
-
-
 class ImageDelegate(QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         if not index.isValid():
             return
+        
         cluster_parent = index.data(Qt.DisplayRole).node.parent
         painter.save()
-        # Fill the background with the appropriate color
         enlarged_rect = option.rect.adjusted(-8, -8, 8, 8)
-        color = color_mapping[hash(id(cluster_parent)) % len(color_mapping)]
+
+        # Specify correct color based on the number after last - in the name
+        match = re.search(r'-(\d+)$', cluster_parent.name)
+        if match:
+            color_index = int(match.group(1))
+            if color_index < len(app.cfg.Configuration.color_mapping):
+                color = app.cfg.Configuration.color_mapping[color_index]
+            else:
+                print("Not enough color mappings")  # Some default color
+        else:
+            print("Error matching cluster name color to mapping")  # Some default color
+
+
         painter.fillRect(enlarged_rect, color)
 
         pixmap = index.data().get_image()

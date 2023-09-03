@@ -17,12 +17,20 @@ from app.src.MovePhotosToResults import FileManager
 from app.src.CommitedLayout import CommitedFilesWidget
 from app.src.KMeansParamsWidget import KMeansParamsWidget
 from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtGui import QPalette, QColor
 
 thumbnail_size = RESIZED_IMAGES_SIZE
 
 class ImageBrowser(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        # Set GUI style here
+        QApplication.setStyle("Fusion")
+        palette = QPalette()
+        palette.setColor(QPalette.Base, QColor(190, 190, 190))
+        QApplication.setPalette(palette)
+
         self.thread = None
         self.initUI()
 
@@ -50,7 +58,7 @@ class ImageBrowser(QMainWindow):
         self.splitter.setSizes([int(element * splittersize) for element in [0.05, 0.9, 0.05]])
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setMinimum(1)
-        self.slider.setMaximum(10)
+        self.slider.setMaximum(30)
         self.sliderlabel = QLabel()
 
         main_layout.addWidget(self.splitter)
