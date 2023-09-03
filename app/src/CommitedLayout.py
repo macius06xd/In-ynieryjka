@@ -37,6 +37,11 @@ class NameInputDialog(QDialog):
 
         self.setLayout(self.layout)
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
+            self.accept()  # Trigger accept action on Enter key
+        else:
+            super().keyPressEvent(event)
     def get_new_name(self):
         return self.input_edit.text()
 
@@ -66,10 +71,7 @@ class CommitedFilesListView(QListView):
                 pass
 
     def uncommit(self, index):
-        if index is QModelIndex:
-            data = index.internalPointer()
-        else:
-            data = index
+        data = index.internalPointer()
         data.commited = False
         db = DataBaseConnection()
         db.unCommit(data)

@@ -4,7 +4,7 @@ from array import array
 from functools import partial
 
 from PyQt5.QtCore import Qt, QSize, QEvent, pyqtSignal, QModelIndex, QAbstractListModel, QMimeData, QByteArray, \
-    QDataStream, QIODevice, QVariant
+    QDataStream, QIODevice, QVariant, QRect
 from PyQt5.QtGui import QPixmap, QImageReader, QStandardItem, QPen, QColor, QDrag
 from PyQt5.QtWidgets import (QListView, QAbstractItemView, QMessageBox,
                              QStyle, QStyledItemDelegate, QWidget, QMenu, QAction, QInputDialog)
@@ -199,27 +199,20 @@ class ImageViewer(QListView):
         self.model().layoutChanged.emit()
 
 class ImageDelegate(QStyledItemDelegate):
+    prev_parent = None
 
     def paint(self, painter, option, index):
         if not index.isValid():
             return
-        
-        cluster_parent = index.data(Qt.DisplayRole).node.parent
+
+        cluster_item = index.data(Qt.DisplayRole).node
         painter.save()
-        enlarged_rect = option.rect.adjusted(-8, -8, 8, 8)
+        enlarged_rect = option.rect.adjusted(-4, -4, 4, 4)
 
         # Specify correct color based on the number after last - in the name
-        match = re.search(r'-(\d+)$', cluster_parent.name)
-        if match:
-            color_index = int(match.group(1))
-            if color_index < len(app.cfg.Configuration.color_mapping):
-                color = app.cfg.Configuration.color_mapping[color_index]
-            else:
-                print("Not enough color mappings")  # Some default color
-        else:
-            print("Error matching cluster name color to mapping")  # Some default color
-
-
+        color_index = cluster_item.parent.id
+        color_index = color_index % len(app.cfg.Configuration.color_mapping)
+        color = app.cfg.Configuration.color_mapping[color_index]
         painter.fillRect(enlarged_rect, color)
 
         pixmap = index.data().get_image()
@@ -239,10 +232,11 @@ class ImageDelegate(QStyledItemDelegate):
         pixmapitem = index.data()
         pixmap_width = pixmapitem.get_image().width()
         pixmap_height = pixmapitem.get_image().height()
-        return QSize(pixmap_width + 8, pixmap_height + 8)
+        return QSize(pixmap_width + 8, pixmap_height + 10)  # Increased height to account for the square
 
     def flags(self, index):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled | Qt.ItemIsDragEnabled
+
 
 
 class PixmapItem(QStandardItem):
