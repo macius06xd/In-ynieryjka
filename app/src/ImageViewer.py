@@ -18,13 +18,15 @@ thumbnail_size = app.cfg.Configuration.RESIZED_IMAGES_SIZE
 import os
 from PyQt5.QtGui import QPixmapCache
 
+
 class ImageViewer(QListView):
     node_changed_signal = pyqtSignal(list, FileSystemNode, int)
     image_deleted = pyqtSignal(str)
     file_system_changed = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, clusterManager):
         super().__init__()
+        self.clusterManager = clusterManager
         self.files = None
         self.active_directory = None
         self.setViewMode(QListView.IconMode)
@@ -49,11 +51,14 @@ class ImageViewer(QListView):
         self.cluster = None
         self.commitedLayout = None
 
+        clusterManager.setImageViewerModel(self.model())
+
     def manage_selection(self, selected, deselected):
         selected_indexes = selected
         self.selected_items = selected
         self.ctrl_pressed = False
         self.viewport().update()
+
     def setCommitedLayout(self, layout):
         self.commitedLayout = layout
 
@@ -79,43 +84,19 @@ class ImageViewer(QListView):
     def clusterCombine(self, index):
         data = index.internalPointer()
         parent = data.node.parent
-        items = self.commitedLayout.get_commited()
-
-        # Create a list of item names
+        items = self.clusterManager.get_commited()
         item_names = [item.name for item in items if item != parent]
-
         # Add a cancel option to the list
         item_names.append("Cancel")
-
         # Show the input dialog menu
         selected_item, ok = QInputDialog.getItem(self, "Choose Item", "Select an item:", item_names, editable=False)
-
-        # Check if the user made a selection or cancelled
         if ok and selected_item:
             if selected_item == "Cancel":
                 # User chose to cancel the operation
                 QMessageBox.information(self, "Cancel", "Operation cancelled.")
             else:
-                # User selected an item
-                self.commitedLayout.un_commit(parent)
                 selected_node = next((item for item in items if item.name == selected_item), None)
-                if selected_node:
-                    files = [item for item in self.model().listdata if item.node.parent == parent]
-                    is_view = files[0].node.is_in_parent(self.dir)
-                    for file in files:
-                        if is_view:
-                            self.model().remove(file)
-                        file.node.parent = selected_node
-                    parent.clear_childs()
-                    selected_node.add_child([element.node for element in files])
-                    self.model().layoutChanged.emit()
-                    self.file_system_changed.emit()
-                    db = DataBaseConnection()
-                    db.update_parent(files,selected_node)
-
-        else:
-            # User cancelled the operation
-            QMessageBox.information(self, "Cancel", "Operation cancelled.")
+                self.clusterManager.clusterCombine(parent, selected_node)
 
     # Clusterization Behaviour
     def slider_changed(self, value):
@@ -123,27 +104,27 @@ class ImageViewer(QListView):
         app.cfg.Configuration.time = time.time()
         from app.src.Clusterization import Cluster
 
-        if self.dir.commited == 0 and not any(item.node.parent.commited == 1 for item in self.model().listdata):
+        if self.model().dir.commited == 0 and not any(item.node.parent.commited == 1 for item in self.model().listdata):
             if self.cluster is None:
-                self.cluster = Cluster(self.model().listdata, value,self.onImageClicked)
+                self.cluster = Cluster(self.model().listdata, value, self.onImageClicked)
                 self.model().lista_changed.connect(self.cluster.Reevaluate)
 
             self.cluster.set_clusters(value, self.model().listdata)
             if None not in [x.cluster for x in self.model().listdata]:
                 self.model().listdata = sorted(self.model().listdata, key=lambda x: x.cluster)
                 self.model().layoutChanged.emit()
-            self.node_changed_signal.emit(self.model().listdata, self.dir, value)
+            self.clusterManager.Cluster(self.model().listdata, self.model().dir, value)
         else:
             error_message = "Can't Cluster committed folder"
             QMessageBox.critical(self, "Error", error_message)
-            if self.dir.commited != 0:
+            if self.model().dir.commited != 0:
                 print("Condition self.dir.commited == 0 failed")
             else:
                 print("View Contain Commited Folder")
 
     def onImageClicked(self, node):
-        if not isinstance(node,PixmapItem):
-         data = node.internalPointer()
+        if not isinstance(node, PixmapItem):
+            data = node.internalPointer()
         else:
             data = node
         self.model().remove(data)
@@ -151,42 +132,12 @@ class ImageViewer(QListView):
         self.image_deleted.emit(os.path.basename(data.path))
         self.model().layoutChanged.emit()
 
-    # Loading images when folder (File System is clicked)
-    def load_images_from_folder(self, dir):
-        app.cfg.Configuration.time = time.time()
-        self.model().listdata.clear()
-        self.dir = dir.internalPointer()
-        image_extensions = QImageReader.supportedImageFormats()
-        for file in dir.data(Qt.UserRole).children:
-            file_name = os.path.basename(file.path)
-            if file_name.split('.')[-1].encode() in image_extensions:
-                item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                self.model().add(item)
-            if file.cluster:
-                self.load_further(file)
-        self.model().layoutChanged.emit()
-        print(f"Loading Data Time: {time.time() - app.cfg.Configuration.time}")
-
-    # Recurssion for loading
-    def load_further(self, dir):
-        image_extensions = QImageReader.supportedImageFormats()
-        if not dir.commited:
-            for file in dir.children:
-                file_name = os.path.basename(file.path)
-                if file_name.split('.')[-1].encode() in image_extensions:
-
-                    item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)
-                    item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                    self.model().add(item)
-                if file.cluster:
-                    self.load_further(file)
 
     def add_image(self, item):
         self.model().add(item)
 
     def recive_notification_from_FileSystem(self, dir):
-        self.load_images_from_folder(dir)
+        self.model().load_images_from_folder(dir)
 
     def remove_from_model(self, data):
         path = data.path
@@ -197,6 +148,7 @@ class ImageViewer(QListView):
                 del self.model().listdata[i]
             i = i + 1
         self.model().layoutChanged.emit()
+
 
 class ImageDelegate(QStyledItemDelegate):
     prev_parent = None
@@ -238,7 +190,6 @@ class ImageDelegate(QStyledItemDelegate):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled | Qt.ItemIsDragEnabled
 
 
-
 class PixmapItem(QStandardItem):
     def __init__(self, path, node, cluster=None):
         super().__init__()
@@ -256,6 +207,7 @@ class PixmapItem(QStandardItem):
 
     def get_path(self):
         return self.path
+
     def get_image(self):
         if QPixmapCache.find(self.path):
             return QPixmapCache.find(self.path)
@@ -267,6 +219,7 @@ class PixmapItem(QStandardItem):
 
 class MyListModel(QAbstractListModel):
     lista_changed = pyqtSignal()
+    dir = None
     def __init__(self, datain, parent=None, *args):
         QAbstractListModel.__init__(self, parent, *args)
         self.listdata: array = datain
@@ -299,29 +252,6 @@ class MyListModel(QAbstractListModel):
             if self.data(index, Qt.UserRole) == item.get_path():
                 return index
         return QModelIndex()
-
-    # NOT USED DEPRECEATED (MOVING IMAGES)
-    def supportedDropActions(self):
-        return Qt.MoveAction
-
-    # NOT USED DEPRECEATED (MOVING IMAGES)
-    def mimeTypes(self):
-        return [self.mime_type]
-
-    # NOT USED DEPRECEATED (MOVING IMAGES)
-    def mimeData(self, indexes):
-        mime_data = QMimeData()
-        encoded_data = QByteArray()
-        stream = QDataStream(encoded_data, QIODevice.WriteOnly)
-
-        for index in indexes:
-            if index.isValid():
-                node = index.internalPointer()
-                stream.writeQString(node.node.id)
-
-        mime_data.setData(self.mime_type, encoded_data)
-        return mime_data
-
     def getElementById(self, id):
         for row in range(self.rowCount()):
             index = self.index(row)
@@ -333,6 +263,36 @@ class MyListModel(QAbstractListModel):
     def remove(self, item):
         self.lista_changed.emit()
         self.listdata.remove(item)
-    def add(self,item):
+
+    def add(self, item):
         self.lista_changed.emit()
         self.listdata.append(item)
+
+    def load_images_from_folder(self, dir):
+        app.cfg.Configuration.time = time.time()
+        self.listdata.clear()
+        self.dir = dir.internalPointer()
+        image_extensions = QImageReader.supportedImageFormats()
+        for file in dir.data(Qt.UserRole).children:
+            file_name = os.path.basename(file.path)
+            if file_name.split('.')[-1].encode() in image_extensions:
+                item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                self.add(item)
+            if file.cluster:
+                self.load_further(file)
+        self.layoutChanged.emit()
+        print(f"Loading Data Time: {time.time() - app.cfg.Configuration.time}")
+
+    # Recurssion for loading
+    def load_further(self, dir):
+        image_extensions = QImageReader.supportedImageFormats()
+        if not dir.commited:
+            for file in dir.children:
+                file_name = os.path.basename(file.path)
+                if file_name.split('.')[-1].encode() in image_extensions:
+                    item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)
+                    item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                    self.add(item)
+                if file.cluster:
+                    self.load_further(file)

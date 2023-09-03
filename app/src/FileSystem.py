@@ -83,8 +83,9 @@ class FileSystem(QTreeView):
     Node_Commited = pyqtSignal(FileSystemNode)
     def refresh(self):
         self.model().layoutChanged.emit()
-    def __init__(self, image_viewer, parent=None):
+    def __init__(self, image_viewer,clusterManager, parent=None):
         super().__init__(parent)
+        self.clusterManager = clusterManager
         self.image_viewer = image_viewer
         self.clicked.connect(self.on_tree_clicked)
         model = FileSystemModel()
@@ -111,7 +112,7 @@ class FileSystem(QTreeView):
         layout.addWidget(self)
         self.db = app.src.DataBase.DataBaseConnection()
         self.setLayout(layout)
-
+        self.clusterManager.setFileSystemModel(self.model())
     def commit(self):
         for node in self.model().get_commited_nodes():
             self.Node_Commited.emit(node)
@@ -153,14 +154,7 @@ class FileSystem(QTreeView):
             menu.exec_(self.viewport().mapToGlobal(point))
 
     def commitNode(self, index):
-        node: FileSystemNode = index.data(Qt.UserRole)
-        node.cluster = True
-        count, childs = node.get_cluster_count()
-        for child in childs:
-            self.db.commit(child)
-        self.db.commit(node)
-        self.Node_Commited.emit(node)
-        self.model().layoutChanged.emit()
+        self.clusterManager.commit(index)
 
     def rowsInserted(self, parent: QModelIndex, first: int, last: int) -> None:
         print("dodaje")
@@ -178,63 +172,7 @@ class FileSystem(QTreeView):
     def on_tree_clicked(self, index):
         self.current_index = index
         if len(index.data(Qt.UserRole).children) != 0:
-            self.image_viewer.load_images_from_folder(index)
-
-    ## nie wiem co tu sie dzieje ale działa (nie dotykac)
-    ## jednak nie dziala ale nie wiem jak naprawic xd
-    ## Problem jest taki że to ledwo działa
-    def on_cluster(self, items: list, dir: QModelIndex, cluster_number):
-        start = time.time()
-        map = {}
-        node: FileSystemNode = dir
-        dir_name = node.name
-        ready_clusters = [element for element in node.children if element.cluster and not element.commited]
-        for i, cluster in enumerate(ready_clusters):
-            map[i] = cluster
-        if node is not None:
-            for i in range(len(ready_clusters), cluster_number):
-                cluster_node = FileSystemNode(dir_name + "-" + str(i), "-", node, True)
-                map[i] = cluster_node
-                node.add_child(cluster_node)
-        clusters = [[] for _ in range(cluster_number + 1)]  # Create k empty lists to hold the items
-        for item in items:
-            cluster = item.cluster
-            if cluster is not None and 0 <= cluster < cluster_number:
-                node2: FileSystemNode = item.node
-                node2.parent.remove_child(node2)
-                node2.parent = map[item.cluster]
-                clusters[cluster].append(node2)
-        for i in range(0, cluster_number):
-            map[i].add_child(clusters[i])
-        print(f"File System Clusters : {time.time() - start}")
-        self.db.cluster(node, map, cluster_number)
-        print(time.time() - app.cfg.Configuration.time)
-        self.delete_empty_clusters(dir)
-        self.model().layoutChanged.emit()
-        pass
-
-    def delete_empty_clusters(self,dir):
-        child_clusters = [element for element in dir.children if element.cluster]
-        for child in child_clusters:
-            list = []
-            for inner_child in child.children:
-                if inner_child.cluster and inner_child.commited == 0:
-                    self.remove_recursion(inner_child)
-                    list.append(inner_child)
-            for i in list:
-                child.remove_child(i)
-                
-    def remove_recursion(self,dir):
-        list = []
-        for inner_child in dir.children:
-            if inner_child.cluster and inner_child.commited == 0:
-                self.remove_recursion(inner_child)
-                list.append(inner_child)
-        for i in list:
-            dir.remove_child(i)
-        self.db.delete_cluster(dir)
-
-
+            self.clusterManager.load_images_from_folder(index)
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
 from os import scandir

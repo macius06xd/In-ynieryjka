@@ -10,11 +10,13 @@ from PyQt5.QtWidgets import (
 )
 
 from app.cfg.Configuration import *
+
 from app.src.DataBase import DataBaseConnection
 
 if TYPE_CHECKING:
     from app.src.FileSystem import FileSystemNode
     from app.src.ImageViewer import PixmapItem
+    from app.src.ClusterManager import ClusterManager
 
 
 class NameInputDialog(QDialog):
@@ -47,9 +49,9 @@ class NameInputDialog(QDialog):
 
 
 class CommitedFilesListView(QListView):
-    def __init__(self, parent=None):
+    def __init__(self,clusterManager, parent=None):
         super().__init__(parent)
-
+        self.clusterManager:ClusterManager = clusterManager
     def contextMenuEvent(self, event):
         index = self.indexAt(event.pos())
         if index.isValid():
@@ -69,7 +71,6 @@ class CommitedFilesListView(QListView):
             if action is not None:
                 # Handle the selected action
                 pass
-
     def uncommit(self, index):
         data = index.internalPointer()
         data.commited = False
@@ -83,32 +84,34 @@ class CommitedFilesListView(QListView):
         if dialog.exec_() == QDialog.Accepted:
             new_name = dialog.get_new_name()
             if new_name:
-                db = DataBaseConnection()
-                db.renamefile(new_name, index.data().id)
-                index.internalPointer().name = new_name
+                self.clusterManager.renameCluster(index,new_name)
 
     def get_commited(self):
         return self.model().get_data()
 
+    def mouseDoubleClickEvent(self, event):
+        index = self.indexAt(event.pos())
+        if index.isValid():
+            self.rename(index)
+            pass
+        super().mouseDoubleClickEvent(event)
 
 class CommitedFilesWidget(QWidget):
-    def __init__(self):
+    def __init__(self,clusterManager):
         super().__init__()
-
         # Set the background color for the widget
         self.setStyleSheet("background-color: #F0F0F0;")
-
         self.layout = QGridLayout()
 
-        self.list_view = CommitedFilesListView()
+        self.list_view = CommitedFilesListView(clusterManager)
         self.list_view.setResizeMode(QListView.Adjust)
         self.list_view.setWordWrap(True)
         self.model = CommitedFolderListModel()
 
         self.list_view.setModel(self.model)
+        clusterManager.setCommitedModel(self.model)
         self.list_view.setItemDelegate(CommitedFolderDelegate())
 
-        self.list_view.doubleClicked.connect(self.open_name_dialog)
 
         self.grid_view_button = QPushButton("Grid View")
         self.grid_view_button.setCheckable(True)
@@ -121,22 +124,12 @@ class CommitedFilesWidget(QWidget):
         self.layout.addWidget(self.list_view, 1, 0)
 
         self.setLayout(self.layout)
-
         self.is_grid_view = False
 
     def toggle_view(self):
         self.list_view.setViewMode(QListView.IconMode if self.grid_view_button.isChecked() else QListView.ListMode)
         self.list_view.itemDelegate().grid_view = self.grid_view_button.isChecked()
         self.list_view.update()
-
-    def open_name_dialog(self, index):
-        dialog = NameInputDialog(self)
-        if dialog.exec_() == QDialog.Accepted:
-            new_name = dialog.get_new_name()
-            if new_name:
-                db = DataBaseConnection()
-                db.renamefile(new_name, index.data().id)
-                self.model.setData(index, new_name)
 
     def add_commit(self, nodes: 'FileSystemNode'):
         self.model.add_element(nodes)
@@ -311,7 +304,12 @@ class CommitedFolderDelegate(QStyledItemDelegate):
                 painter.fillRect(indicator_rect, Qt.red)
 
         else:
-            image = QPixmap(image_path)
+            try:
+                image_path = os.path.join(RESIZED_IMAGES_PATH, element.children[0].name)
+                image = QPixmap(image_path)
+            except:
+                icon = QApplication.style().standardIcon(QStyle.SP_DialogOkButton)
+                image = icon.pixmap(RESIZED_IMAGES_SIZE, RESIZED_IMAGES_SIZE)
             painter.drawPixmap(option.rect.x(), option.rect.y(), image)
 
     def sizeHint(self, option, index):
