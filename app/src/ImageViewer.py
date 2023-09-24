@@ -161,10 +161,8 @@ class ImageDelegate(QStyledItemDelegate):
         painter.save()
         enlarged_rect = option.rect.adjusted(-4, -4, 4, 4)
 
-        # Specify correct color based on the number after last - in the name
-        color_index = cluster_item.parent.id
-        color_index = color_index % len(app.cfg.Configuration.color_mapping)
-        color = app.cfg.Configuration.color_mapping[color_index]
+        # Specify correct color based on the color_id
+        color = app.cfg.Configuration.color_mapping[index.data(Qt.DisplayRole).node.parent.color_id]
         painter.fillRect(enlarged_rect, color)
 
         pixmap = index.data().get_image()

@@ -16,7 +16,7 @@ import app.src.DataBase
 
 class FileSystemNode:
 
-    def __init__(self, name, path, parent=None, cluster=False, commited=False):
+    def __init__(self, name, path, parent=None, cluster=False, commited=False, color_id=0):
         self.id = 0
         self.name = name
         self.path = path
@@ -26,6 +26,7 @@ class FileSystemNode:
         if commited is None:
             commited = False
         self.commited = commited
+        self.color_id = color_id
 
     def add_child(self, child):
         if isinstance(child, Iterable):
@@ -301,12 +302,7 @@ class FileSystemModel(QAbstractItemModel):
                 font.setBold(True)
                 return font
         elif role == Qt.ForegroundRole:
-        # Specify correct color based on the number after last - in the name
-            match = re.search(r'-(\d+)$', node.name)
-            if match:
-                index = int(match.group(1))
-                if index < len(app.cfg.Configuration.color_mapping):
-                    return app.cfg.Configuration.color_mapping[index]
+            return app.cfg.Configuration.color_mapping[node.color_id]
 
     def removeRows(self, row, count, parent=QModelIndex()):
         if not parent.isValid():

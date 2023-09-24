@@ -35,6 +35,7 @@ class DataBaseConnection:
             isCluster INTEGER,
             parent_id INTEGER,
             commited INTEGER,
+            color_id INTEGER,
             FOREIGN KEY (parent_id) REFERENCES file_system (id)
         );
         """
@@ -118,7 +119,7 @@ class DataBaseConnection:
 
         # Check if data is not an image
         if not data[1].endswith("jpg"):
-            node = FileSystemNode(data[1], data[2], parent, data[3], data[5])
+            node = FileSystemNode(data[1], data[2], parent, data[3], data[5], data[6])
             node.id = data[0]
             query = "SELECT * FROM file_system WHERE parent_id = ?"
             self.cursor.execute(query, (data[0],))
@@ -129,7 +130,7 @@ class DataBaseConnection:
                 child_node = self._rebuild_node(child_data, data[0], node)
                 node.add_child(child_node)
         else:
-            node = FileSystemNode(data[1], data[2], parent, data[3], data[5])
+            node = FileSystemNode(data[1], data[2], parent, data[3], data[5], data[6])
             node.id = data[0]
 
         # Retrieve files within the current node (folder)
@@ -150,8 +151,8 @@ class DataBaseConnection:
             self.cursor.execute(query, (node.name, node.path, parent_id))
             file_id = self.cursor.lastrowid
         else:
-            query = "INSERT INTO file_system (name, path, isCluster, parent_id,commited) VALUES (?, ?, ?, ?,?)"
-            self.cursor.execute(query, (node.name, node.path, node.cluster, parent_id, 0))
+            query = "INSERT INTO file_system (name, path, isCluster, parent_id, commited, color_id) VALUES (?, ?, ?, ?, ?, ?)"
+            self.cursor.execute(query, (node.name, node.path, node.cluster, parent_id, 0, node.color_id))
             file_id = self.cursor.lastrowid
 
         node.id = file_id
@@ -184,8 +185,8 @@ class DataBaseConnection:
                     else:
                         # Create a new cluster in the database
                         self.cursor.execute(
-                            "INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
-                            (child_node.parent.name, child_node.parent.path, 1, parent_id))
+                            "INSERT INTO file_system (name, path, isCluster, parent_id, color_id) VALUES (?, ?, ?, ?, ?)",
+                            (child_node.parent.name, child_node.parent.path, 1, parent_id, child_node.color_id))
                         self.connection.commit()
                         parent_id_ = self.cursor.lastrowid
                         cluster_id_map[child_node.parent.name] = parent_id_
@@ -212,8 +213,8 @@ class DataBaseConnection:
                                         (child_node.name, child_node.path, parent_id))
                 else:
                     iden = self.cursor.execute(
-                        "INSERT INTO file_system (name, path, isCluster, parent_id) VALUES (?, ?, ?, ?)",
-                        (child_node.name, child_node.path, 1, parent_id))
+                        "INSERT INTO file_system (name, path, isCluster, parent_id, color_id) VALUES (?, ?, ?, ?, ?)",
+                        (child_node.name, child_node.path, 1, parent_id, child_node.color_id))
                     child_node.id = iden
                 child_id = self.cursor.lastrowid
                 child_ids.append(child_id)
