@@ -3,6 +3,8 @@ import re
 import time
 import sys
 from functools import partial
+
+import typing
 from typing import Iterable
 
 from PyQt5.QtCore import QModelIndex, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal, \
@@ -13,6 +15,7 @@ from PyQt5.QtWidgets import QTreeView, QVBoxLayout, QMenu, QAbstractItemView
 from app.cfg.Configuration import INITIAL_CLUSTERIZED_FOLDER
 import app.cfg.Configuration
 import app.src.DataBase
+
 
 class FileSystemNode:
 
@@ -32,8 +35,10 @@ class FileSystemNode:
         if isinstance(child, Iterable):
             for c in child:
                 self.children.append(c)
+                c.parent = self
         else:
             self.children.append(child)
+            child.parent = self
 
     def child(self, row):
         if row >= len(self.children):
@@ -71,7 +76,7 @@ class FileSystemNode:
 
         return count, cluster_list
 
-    def is_in_parent(self,node):
+    def is_in_parent(self, node):
         if node.parent is None:
             return False
         if node == self.parent:
@@ -79,20 +84,21 @@ class FileSystemNode:
         return self.parent.is_in_parent(node)
 
 
-
 class FileSystem(QTreeView):
     Node_Commited = pyqtSignal(FileSystemNode)
+
     def refresh(self):
         self.model().layoutChanged.emit()
-    def __init__(self, image_viewer,clusterManager, parent=None):
+
+    def __init__(self, image_viewer, clusterManager, parent=None):
         super().__init__(parent)
         self.clusterManager = clusterManager
         self.image_viewer = image_viewer
-        self.clicked.connect(self.on_tree_clicked)
+        self.doubleClicked.connect(self.on_tree_clicked)
         model = FileSystemModel()
         self.setModel(model)
-        if app.cfg.Configuration.is_it_run_first_time == 0 :
-          self.model().populate(self)
+        if app.cfg.Configuration.is_it_run_first_time == 0:
+            self.model().populate(self)
         self.setModel(self.model())
         self.setIndentation(20)
         self.setSortingEnabled(True)
@@ -103,9 +109,6 @@ class FileSystem(QTreeView):
         self.setAllColumnsShowFocus(True)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
-        self.setDragDropMode(QAbstractItemView.DragDrop)
-        self.setDragEnabled(True)
-        self.setAcceptDrops(True)
         self.model().rowsAboutToBeRemoved.connect(self.rowsRemoved)
         self.model().layoutChanged.connect(self.changed)
         self.current_index = None
@@ -114,6 +117,7 @@ class FileSystem(QTreeView):
         self.db = app.src.DataBase.DataBaseConnection()
         self.setLayout(layout)
         self.clusterManager.setFileSystemModel(self.model())
+
     def commit(self):
         for node in self.model().get_commited_nodes():
             self.Node_Commited.emit(node)
@@ -144,15 +148,21 @@ class FileSystem(QTreeView):
 
     def showContextMenu(self, point):
         index = self.indexAt(point)
+        selected = self.selectedIndexes()
         if index.isValid():
             menu = QMenu(self)
 
             commit_action = menu.addAction("Commit")
+            merge_action = menu.addAction("Selected")
+            merge_action.triggered.connect(partial(self.merge, selected))
             commit_action.triggered.connect(partial(self.commitNode, index))
 
             # Add other actions to the menu if needed
 
             menu.exec_(self.viewport().mapToGlobal(point))
+
+    def merge(self, selectedNodes: typing.List[QModelIndex]):
+        self.clusterManager.merge([y.internalPointer() for y in selectedNodes])
 
     def commitNode(self, index):
         self.clusterManager.commit(index)
@@ -175,6 +185,7 @@ class FileSystem(QTreeView):
         if len(index.data(Qt.UserRole).children) != 0:
             self.clusterManager.load_images_from_folder(index)
 
+
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
 from os import scandir
 
@@ -184,6 +195,9 @@ class FileSystemModel(QAbstractItemModel):
         super().__init__()
         self.root_node = FileSystemNode("/", INITIAL_CLUSTERIZED_FOLDER)
         self.mime_type = "application/x-qabstractitemmodeldatalist"
+
+    def get_root_node(self):
+        return self.root_node
 
     def index(self, row, column, parent=QModelIndex()):
         if not parent.isValid():
@@ -218,59 +232,6 @@ class FileSystemModel(QAbstractItemModel):
             return default_flags | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled
         else:
             return default_flags | Qt.ItemIsDropEnabled
-
-    def dropMimeData(self, data, action, row, column, parent):
-        if action == Qt.IgnoreAction:
-            return True
-
-        if not data.hasFormat(self.mime_type):
-            return False
-
-        if column > 0:
-            return False
-
-        if not parent.isValid():
-            parent_node = self.root_node
-        else:
-            parent_node = parent.internalPointer()
-
-        if row == -1:
-            row = parent_node.rowCount()
-
-        items = data.data(self.mime_type)
-        stream = QDataStream(items, QIODevice.ReadOnly)
-        print("czemu to nie wchodzi")
-        new_items = []
-        while not stream.atEnd():
-            row_count = len(parent_node.children)
-            if row >= row_count:
-                row = row_count
-            name = ""
-            path = ""
-            stream >> name >> path
-            new_node = FileSystemNode(name, path, parent_node)
-            parent_node.add_child(new_node)
-            new_items.append(new_node)
-            row += 1
-        return True
-
-    def mimeTypes(self):
-        return [self.mime_type]
-
-    def mimeData(self, indexes):
-        mime_data = QMimeData()
-        encoded_data = QByteArray()
-        stream = QDataStream(encoded_data, QIODevice.WriteOnly)
-
-        for index in indexes:
-            if index.isValid():
-                node = index.internalPointer()
-                stream.writeQString(node.name)
-                stream.writeQString(node.path)
-                stream.writeQString(node.parent.path)
-
-        mime_data.setData(self.mime_type, encoded_data)
-        return mime_data
 
     def rowCount(self, parent=QModelIndex()):
         if not parent.isValid():
@@ -338,9 +299,9 @@ class FileSystemModel(QAbstractItemModel):
             self.endResetModel()
 
         else:
-            print("is_it_run_first_time value error, it should be either 0 or 1, but is:", app.cfg.Configuration.is_it_run_first_time)
+            print("is_it_run_first_time value error, it should be either 0 or 1, but is:",
+                  app.cfg.Configuration.is_it_run_first_time)
             sys.exit()
-
 
     def populate_recursively(self, parent_node):
         for child_entry in scandir(parent_node.path):

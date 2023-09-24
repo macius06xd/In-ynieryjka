@@ -1,4 +1,5 @@
 import time
+import typing
 
 from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtWidgets import QInputDialog, QMessageBox
@@ -64,7 +65,8 @@ class ClusterManager:
         db.unCommit(data)
         self.CommitedModel.remove_element(data)
         self.CommitedModel.layoutChanged.emit()
-    def commit(self,index):
+
+    def commit(self, index):
         node: FileSystemNode = index.data(Qt.UserRole)
         node.cluster = True
         count, childs = node.get_cluster_count()
@@ -74,6 +76,7 @@ class ClusterManager:
         self.CommitedModel.add_element(node)
         self.FileSystemModel.layoutChanged.emit()
         self.CommitedModel.layoutChanged.emit()
+
     def load_images_from_folder(self, index):
         self.ImageViewerModel.load_images_from_folder(index)
 
@@ -107,7 +110,8 @@ class ClusterManager:
         self.delete_empty_clusters(dir)
         self.FileSystemModel.layoutChanged.emit()
         pass
-    #TODO Move to model
+
+    # TODO Move to model
     def delete_empty_clusters(self, dir):
         child_clusters = [element for element in dir.children if element.cluster]
         for child in child_clusters:
@@ -129,3 +133,31 @@ class ClusterManager:
         for i in list:
             dir.remove_child(i)
         self.db.delete_cluster(dir)
+
+    def merge(self, nodes: typing.List['FileSystemNode']):
+        # Build list of nodes to transfer
+        cluster_set = set()
+        for node in nodes:
+            cluster_set.add(node)
+            _, childs = node.get_cluster_count()
+            self.CommitedModel.remove_element(node)
+            for child in childs:
+                cluster_set.add(child)
+                self.CommitedModel.remove_element(child)
+        # Create new cluster
+        new_node = FileSystemNode("Merged", "-", self.FileSystemModel.get_root_node(), True, False)
+        self.db.persist_new_node(new_node)
+        self.FileSystemModel.get_root_node().add_child(new_node)
+        # Build File List
+        # TODO nie budować tylko podać liste nodów
+        node_list = list()
+        for node in cluster_set:
+            for child in node.children:
+                node_list.append(child)
+        for node in cluster_set:
+            node.clear_childs()
+        # Update Tree and Database
+        new_node.add_child(node_list)
+        self.db.update_parent(node_list, new_node)
+        self.FileSystemModel.layoutChanged.emit()
+        self.ImageViewerModel.layoutChanged.emit()

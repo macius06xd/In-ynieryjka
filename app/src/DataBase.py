@@ -281,5 +281,13 @@ class DataBaseConnection:
     #TODO write some util functions
     def update_parent(self , file_list : list , node : 'FileSystemNode'):
         for file in file_list:
-            self.cursor.execute("update file set parent_id = ? where id = ? " , (node.id,file.node.id))
+            self.cursor.execute("update file set parent_id = ? where id = ? ",
+                           (node.id, file.node.id if hasattr(file, 'node') and hasattr(file.node, 'id') else file.id))
+
         self.connection.commit()
+
+    def persist_new_node(self,node):
+        self.cursor.execute("select id from file_system where parent_id is NULL")
+        id = self.cursor.fetchone()[0]
+        self._store_node(node,id)
+
