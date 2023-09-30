@@ -39,7 +39,7 @@ time = 0
 is_it_run_first_time = 0
 
 color_mapping = {
-    0: QColor(255, 0, 0),
+    0: QColor(0, 0, 0),
     1: QColor(0, 255, 0),
     2: QColor(0, 0, 255),
     3: QColor(0, 125, 0),

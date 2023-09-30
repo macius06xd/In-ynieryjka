@@ -7,8 +7,8 @@ from app.cfg.Configuration import INITIAL_CLUSTERIZED_FOLDER
 from typing import TYPE_CHECKING, Dict
 
 if TYPE_CHECKING:
-    from app.src.FileSystem import FileSystemNode
-from app.src.KMeansParameters import KMeansParameters
+    from app.src.file_system.FileSystem import FileSystemNode
+from app.src.clusterization.kmeans.KMeansParameters import KMeansParameters
 
 class Mapper:
     pass
@@ -114,7 +114,7 @@ class DataBaseConnection:
         self.connection.commit()
     # Building a single node
     def _rebuild_node(self, data, parent_id=None, parent=None):
-        from app.src.FileSystem import FileSystemNode
+        from app.src.file_system.FileSystem import FileSystemNode
         node = None
 
         # Check if data is not an image

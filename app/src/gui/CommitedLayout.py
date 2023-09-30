@@ -11,12 +11,12 @@ from PyQt5.QtWidgets import (
 
 from app.cfg.Configuration import *
 
-from app.src.DataBase import DataBaseConnection
+from app.src.database.DataBase import DataBaseConnection
 
 if TYPE_CHECKING:
-    from app.src.FileSystem import FileSystemNode
-    from app.src.ImageViewer import PixmapItem
-    from app.src.ClusterManager import ClusterManager
+    from app.src.file_system.FileSystem import FileSystemNode
+    from app.src.gui.ImageViewer import PixmapItem
+    from app.src.clusterization.ClusterManager import ClusterManager
 
 
 class NameInputDialog(QDialog):

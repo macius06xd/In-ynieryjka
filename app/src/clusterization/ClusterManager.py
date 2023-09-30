@@ -5,10 +5,10 @@ from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtWidgets import QInputDialog, QMessageBox
 
 import app.cfg.Configuration
-from app.src.CommitedLayout import CommitedFolderListModel
-from app.src.DataBase import DataBaseConnection
-from app.src.ImageViewer import MyListModel
-from app.src.FileSystem import FileSystemModel, FileSystemNode
+from app.src.gui.CommitedLayout import CommitedFolderListModel
+from app.src.database.DataBase import DataBaseConnection
+from app.src.gui.ImageViewer import MyListModel
+from app.src.file_system.FileSystem import FileSystemModel, FileSystemNode
 
 
 # every operations on the clusters should be perfomed here

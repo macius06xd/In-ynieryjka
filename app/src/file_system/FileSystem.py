@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QTreeView, QVBoxLayout, QMenu, QAbstractItemView
 
 from app.cfg.Configuration import INITIAL_CLUSTERIZED_FOLDER
 import app.cfg.Configuration
-import app.src.DataBase
+import app.src.database.DataBase
 
 
 class FileSystemNode:
@@ -114,7 +114,7 @@ class FileSystem(QTreeView):
         self.current_index = None
         layout = QVBoxLayout(self)
         layout.addWidget(self)
-        self.db = app.src.DataBase.DataBaseConnection()
+        self.db = app.src.database.DataBase.DataBaseConnection()
         self.setLayout(layout)
         self.clusterManager.setFileSystemModel(self.model())
 
@@ -288,12 +288,12 @@ class FileSystemModel(QAbstractItemModel):
             self.beginResetModel()
             self.populate_recursively(self.root_node)
             self.endResetModel()
-            db = app.src.DataBase.DataBaseConnection()
+            db = app.src.database.DataBase.DataBaseConnection()
             db.build_database_(self.root_node)
 
         elif app.cfg.Configuration.is_it_run_first_time == 0:
             print("Database exists")
-            db = app.src.DataBase.DataBaseConnection()
+            db = app.src.database.DataBase.DataBaseConnection()
             self.beginResetModel()
             self.root_node = db.rebuild_file_system_model()
             self.endResetModel()
@@ -317,7 +317,7 @@ class FileSystemModel(QAbstractItemModel):
         return self.get_node_recursively(self.root_node, name)
 
     def rebuild_file_system_model(self):
-        db = app.src.DataBase.DataBaseConnection()
+        db = app.src.database.DataBase.DataBaseConnection()
         return db.rebuild_file_system_model('/')
 
     def get_node_recursively(self, parent_node, name):

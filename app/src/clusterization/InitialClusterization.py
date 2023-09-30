@@ -6,7 +6,7 @@ import h5py
 import numpy as np
 
 # Import the KMeansParameters class
-from app.src.KMeansParameters import KMeansParameters
+from app.src.clusterization.kmeans.KMeansParameters import KMeansParameters
 
 def load_feature_vectors(vectors_path, image_files):
     with h5py.File(vectors_path, 'r') as f:

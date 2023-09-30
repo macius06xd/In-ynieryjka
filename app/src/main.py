@@ -9,15 +9,15 @@ import app.test.TestConfiguration
 import app.cfg.Configuration
 from app.cfg.Configuration import RESIZED_IMAGES_SIZE, INITIAL_CLUSTERIZED_FOLDER, RESIZED_IMAGES_PATH, \
     INITIAL_IMAGES_FOLDER, VECTORS_PATH
-from app.src.ClusterManager import ClusterManager
-from app.src.CreateResizedDataset import ImageResizeThreadPool
-from app.src.CreateResultFolder import create_result_folders
-from app.src.FileSystem import FileSystem
-from app.src.ImageViewer import ImageViewer
-from app.src.InitialClusterization import ClusteringThread
-from app.src.MovePhotosToResults import FileManager
-from app.src.CommitedLayout import CommitedFilesWidget
-from app.src.KMeansParamsWidget import KMeansParamsWidget
+from app.src.clusterization.ClusterManager import ClusterManager
+from app.src.tools.CreateResizedDataset import ImageResizeThreadPool
+from app.src.tools.CreateResultFolder import create_result_folders
+from app.src.file_system.FileSystem import FileSystem
+from app.src.gui.ImageViewer import ImageViewer
+from app.src.clusterization.InitialClusterization import ClusteringThread
+from app.src.tools.MovePhotosToResults import FileManager
+from app.src.gui.CommitedLayout import CommitedFilesWidget
+from app.src.clusterization.kmeans.KMeansParamsWidget import KMeansParamsWidget
 from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtGui import QPalette, QColor
 

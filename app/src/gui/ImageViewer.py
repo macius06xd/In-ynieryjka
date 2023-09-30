@@ -11,8 +11,8 @@ from PyQt5.QtWidgets import (QListView, QAbstractItemView, QMessageBox,
 
 import app.cfg.Configuration
 from app.cfg.Configuration import RESIZED_IMAGES_PATH
-from app.src.DataBase import DataBaseConnection
-from app.src.FileSystem import FileSystemNode
+from app.src.database.DataBase import DataBaseConnection
+from app.src.file_system.FileSystem import FileSystemNode
 
 thumbnail_size = app.cfg.Configuration.RESIZED_IMAGES_SIZE
 import os
@@ -102,7 +102,7 @@ class ImageViewer(QListView):
     def slider_changed(self, value):
         # Todo
         app.cfg.Configuration.time = time.time()
-        from app.src.Clusterization import Cluster
+        from app.src.clusterization.Clusterization import Cluster
 
         if self.model().dir.commited == 0 and not any(item.node.parent.commited == 1 for item in self.model().listdata):
             if self.cluster is None:

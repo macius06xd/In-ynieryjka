@@ -10,8 +10,8 @@ import sys
 from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QListWidget, QPushButton, QCheckBox
 
 import app.cfg.Configuration
-import app.src.FileSystem
-import app.src.ImageViewer
+import app.src.file_system.FileSystem
+import app.src.gui.ImageViewer
 
 
 class PixmapItemModel(QAbstractListModel):
