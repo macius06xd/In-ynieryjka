@@ -12,12 +12,14 @@ from app.cfg.Configuration import RESIZED_IMAGES_SIZE, INITIAL_CLUSTERIZED_FOLDE
 from app.src.clusterization.ClusterManager import ClusterManager
 from app.src.tools.CreateResizedDataset import ImageResizeThreadPool
 from app.src.tools.CreateResultFolder import create_result_folders
+from app.src.tools.DatabaseSnapshotManager import create_database_snapshot
 from app.src.file_system.FileSystem import FileSystem
 from app.src.gui.ImageViewer import ImageViewer
 from app.src.clusterization.InitialClusterization import ClusteringThread
 from app.src.tools.MovePhotosToResults import FileManager
 from app.src.gui.CommitedLayout import CommitedFilesWidget
 from app.src.clusterization.kmeans.KMeansParamsWidget import KMeansParamsWidget
+from app.src.tools.DatabaseSnapshotLoader import DatabaseSnapshotLoader
 from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtGui import QPalette, QColor
 
@@ -40,6 +42,7 @@ class ImageBrowser(QMainWindow):
     def initUI(self):
 
         # Run initial configuration
+        self.open_load_database_dialog()
         self.display_options_window()
         print("running for first time?", app.cfg.Configuration.is_it_run_first_time)
 
@@ -102,6 +105,12 @@ class ImageBrowser(QMainWindow):
         create_results_button.move(50, 0)
         self.tool_bar.addWidget(create_results_button)
 
+        # Add the "Create database snapshot" button
+        create_snapshot_button = QPushButton("Create database snapshot", self)
+        create_snapshot_button.clicked.connect(create_database_snapshot)
+        create_results_button.move(100, 0)
+        self.tool_bar.addWidget(create_snapshot_button)
+
         self.addToolBar(Qt.TopToolBarArea, self.tool_bar)
         self.tool_bar.setLayoutDirection(Qt.RightToLeft)
         ##################### TOOL BAR - END #######################
@@ -116,6 +125,10 @@ class ImageBrowser(QMainWindow):
         # Create and open the KMeansParamsWidget dialog
         kmeans_params_dialog = KMeansParamsWidget()
         kmeans_params_dialog.exec_()
+
+    def open_load_database_dialog(self):
+        db_loader_dialog = DatabaseSnapshotLoader()
+        db_loader_dialog.exec_()
 
     def sliderValueChanged(self, value):
         self.sliderlabel.setText(f"Clusters: {value}")

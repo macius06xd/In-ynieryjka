@@ -30,6 +30,10 @@ VECTORS_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\xception2.hdf"
 RESULTS_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\wyniki"
 #RESULTS_PATH = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\results_path"
 
+# 7. path of folder containing database snapshots 
+DATABASE_SNAPSHOTS = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\database_snapshots"
+#DATABASE_SNAPSHOTS = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\database_snapshots"
+
 # Size of images in pixels after resizing
 RESIZED_IMAGES_SIZE = 64
 
