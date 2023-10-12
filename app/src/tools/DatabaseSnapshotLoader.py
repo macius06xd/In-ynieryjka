@@ -48,10 +48,12 @@ class DatabaseSnapshotLoader(QDialog):
 
             existing_db_path = os.path.join(INITIAL_CLUSTERIZED_FOLDER, "Database.db")
             if os.path.exists(existing_db_path):
+                print("exist")
                 os.remove(existing_db_path)
 
             os.rename(destination_path, existing_db_path)
             
             print(f"Wybrano plik: {nazwa_pliku} i przeprowadzono zamianę.")
+
         else:
             print("Nie wybrano pliku.")

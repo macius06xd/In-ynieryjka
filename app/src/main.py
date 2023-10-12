@@ -128,7 +128,8 @@ class ImageBrowser(QMainWindow):
 
     def open_load_database_dialog(self):
         db_loader_dialog = DatabaseSnapshotLoader()
-        db_loader_dialog.exec_()
+        db_loader_dialog.setModal(True)
+        return(db_loader_dialog.exec_())
 
     def sliderValueChanged(self, value):
         self.sliderlabel.setText(f"Clusters: {value}")

@@ -19,7 +19,11 @@ class ClusterManager:
     ImageViewerModel: MyListModel = None
     FileSystemModel: FileSystemModel = None
     CommitedModel: CommitedFolderListModel = None
-    db: DataBaseConnection = DataBaseConnection()
+    db: DataBaseConnection = None
+
+    def __init__(self):
+        if self.db is None:
+            self.db = DataBaseConnection()
 
     def setImageViewerModel(self, model):
         self.ImageViewerModel = model
@@ -31,7 +35,7 @@ class ClusterManager:
         self.CommitedModel = model
 
     def renameCluster(self, index: QModelIndex, new_name: str):
-        self.db.renamefile(new_name, index.data().id)
+        self.db.renamefile(new_name, index.internalPointer().id)
         index.internalPointer().name = new_name
 
     def get_commited(self):
@@ -134,20 +138,25 @@ class ClusterManager:
             dir.remove_child(i)
         self.db.delete_cluster(dir)
 
-    def merge(self, nodes: typing.List['FileSystemNode']):
+    def merge(self, nodes: typing.List['FileSystemNode'], recursive=True, parent=None):
         # Build list of nodes to transfer
         cluster_set = set()
         for node in nodes:
-            cluster_set.add(node)
-            _, childs = node.get_cluster_count()
-            self.CommitedModel.remove_element(node)
-            for child in childs:
-                cluster_set.add(child)
-                self.CommitedModel.remove_element(child)
+            if node != parent:
+                cluster_set.add(node)
+                childs = []
+                if recursive:
+                    _, childs = node.get_cluster_count()
+                self.CommitedModel.remove_element(node)
+                for child in childs:
+                    cluster_set.add(child)
+                    self.CommitedModel.remove_element(child)
         # Create new cluster
-        new_node = FileSystemNode("Merged", "-", self.FileSystemModel.get_root_node(), True, False)
-        self.db.persist_new_node(new_node)
-        self.FileSystemModel.get_root_node().add_child(new_node)
+        name = "Merged" if recursive else "Combined"
+        if parent is None:
+            parent = FileSystemNode(name, "-", self.FileSystemModel.get_root_node(), True, False)
+            self.db.persist_new_node(parent)
+            self.FileSystemModel.get_root_node().add_child(parent)
         # Build File List
         # TODO nie budować tylko podać liste nodów
         node_list = list()
@@ -157,7 +166,13 @@ class ClusterManager:
         for node in cluster_set:
             node.clear_childs()
         # Update Tree and Database
-        new_node.add_child(node_list)
-        self.db.update_parent(node_list, new_node)
+        to_delete = []
+        if recursive:
+            node_list = [node for node in node_list if node.cluster == False]
+            to_delete = [node for node in node_list if node.cluster == True]
+        parent.add_child(node_list)
+
+        self.db.update_parent(node_list, parent)
+        self.db.delete_clusters(to_delete)
         self.FileSystemModel.layoutChanged.emit()
         self.ImageViewerModel.layoutChanged.emit()

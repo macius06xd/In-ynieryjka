@@ -10,12 +10,12 @@ if TYPE_CHECKING:
     from app.src.file_system.FileSystem import FileSystemNode
 from app.src.clusterization.kmeans.KMeansParameters import KMeansParameters
 
-class Mapper:
-    pass
+
 
 
 class DataBaseConnection:
     def __init__(self):
+        print("Robimy baze")
         self.kmeans_params = KMeansParameters()
         self.db_path = os.path.join(INITIAL_CLUSTERIZED_FOLDER, "Database.db")
         self.connection = sqlite3.connect(self.db_path)
@@ -281,13 +281,20 @@ class DataBaseConnection:
     #TODO write some util functions
     def update_parent(self , file_list : list , node : 'FileSystemNode'):
         for file in file_list:
+            if hasattr(file,"cluster"):
+                if file.cluster:
+                    self.cursor.execute("update file_system set parent_id = ? where id = ? ", (node.id , file.id))
             self.cursor.execute("update file set parent_id = ? where id = ? ",
                            (node.id, file.node.id if hasattr(file, 'node') and hasattr(file.node, 'id') else file.id))
-
         self.connection.commit()
 
     def persist_new_node(self,node):
         self.cursor.execute("select id from file_system where parent_id is NULL")
         id = self.cursor.fetchone()[0]
         self._store_node(node,id)
+
+    def delete_clusters(self, to_delete):
+        for node in to_delete:
+            self.cursor.execute("DELETE FROM file_system WHERE id = ?", (node.id,))
+        self.connection.commit()
 

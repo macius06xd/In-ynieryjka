@@ -2,56 +2,27 @@ import os
 from functools import partial
 from typing import TYPE_CHECKING
 
-from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, QRect, pyqtSignal
+from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, QRect
 from PyQt5.QtGui import QPixmap, QFont, QFontMetrics
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QListView, QLabel, QStyledItemDelegate, QLineEdit, QDialog, QDialogButtonBox,
-    QPushButton, QGridLayout, QStyle, QMenu, QAction
+    QApplication, QWidget, QListView, QStyledItemDelegate, QDialog, QPushButton, QGridLayout, QStyle, QMenu, QAction
 )
 
 from app.cfg.Configuration import *
 
 from app.src.database.DataBase import DataBaseConnection
+from app.src.tools.NameInputDialog import NameInputDialog
 
 if TYPE_CHECKING:
     from app.src.file_system.FileSystem import FileSystemNode
-    from app.src.gui.ImageViewer import PixmapItem
     from app.src.clusterization.ClusterManager import ClusterManager
 
 
-class NameInputDialog(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Change Name")
-
-        self.layout = QVBoxLayout()
-
-        self.label = QLabel("New Name:")
-        self.layout.addWidget(self.label)
-
-        self.input_edit = QLineEdit()
-        self.layout.addWidget(self.input_edit)
-
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        self.layout.addWidget(button_box)
-
-        self.setLayout(self.layout)
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
-            self.accept()  # Trigger accept action on Enter key
-        else:
-            super().keyPressEvent(event)
-    def get_new_name(self):
-        return self.input_edit.text()
-
-
 class CommitedFilesListView(QListView):
-    def __init__(self,clusterManager, parent=None):
+    def __init__(self, clusterManager, parent=None):
         super().__init__(parent)
-        self.clusterManager:ClusterManager = clusterManager
+        self.clusterManager: ClusterManager = clusterManager
+
     def contextMenuEvent(self, event):
         index = self.indexAt(event.pos())
         if index.isValid():
@@ -71,6 +42,7 @@ class CommitedFilesListView(QListView):
             if action is not None:
                 # Handle the selected action
                 pass
+
     def uncommit(self, index):
         data = index.internalPointer()
         data.commited = False
@@ -84,7 +56,7 @@ class CommitedFilesListView(QListView):
         if dialog.exec_() == QDialog.Accepted:
             new_name = dialog.get_new_name()
             if new_name:
-                self.clusterManager.renameCluster(index,new_name)
+                self.clusterManager.renameCluster(index, new_name)
 
     def get_commited(self):
         return self.model().get_data()
@@ -96,8 +68,9 @@ class CommitedFilesListView(QListView):
             pass
         super().mouseDoubleClickEvent(event)
 
+
 class CommitedFilesWidget(QWidget):
-    def __init__(self,clusterManager):
+    def __init__(self, clusterManager):
         super().__init__()
         # Set the background color for the widget
         self.setStyleSheet("background-color: #F0F0F0;")
@@ -111,7 +84,6 @@ class CommitedFilesWidget(QWidget):
         self.list_view.setModel(self.model)
         clusterManager.setCommitedModel(self.model)
         self.list_view.setItemDelegate(CommitedFolderDelegate())
-
 
         self.grid_view_button = QPushButton("Grid View")
         self.grid_view_button.setCheckable(True)

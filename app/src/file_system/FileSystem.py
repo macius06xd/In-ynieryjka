@@ -10,11 +10,12 @@ from typing import Iterable
 from PyQt5.QtCore import QModelIndex, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal, \
     pyqtSlot
 from PyQt5.QtGui import QColor, QFont
-from PyQt5.QtWidgets import QTreeView, QVBoxLayout, QMenu, QAbstractItemView
+from PyQt5.QtWidgets import QTreeView, QVBoxLayout, QMenu, QAbstractItemView, QDialog
 
 from app.cfg.Configuration import INITIAL_CLUSTERIZED_FOLDER
 import app.cfg.Configuration
 import app.src.database.DataBase
+from app.src.tools.NameInputDialog import NameInputDialog
 
 
 class FileSystemNode:
@@ -108,6 +109,7 @@ class FileSystem(QTreeView):
         self.setExpandsOnDoubleClick(False)
         self.setAllColumnsShowFocus(True)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setToolTipDuration(1000)
         self.customContextMenuRequested.connect(self.showContextMenu)
         self.model().rowsAboutToBeRemoved.connect(self.rowsRemoved)
         self.model().layoutChanged.connect(self.changed)
@@ -151,18 +153,46 @@ class FileSystem(QTreeView):
         selected = self.selectedIndexes()
         if index.isValid():
             menu = QMenu(self)
-
+            menu.setToolTipsVisible(True)
+            menu.setToolTipDuration(1000)
             commit_action = menu.addAction("Commit")
-            merge_action = menu.addAction("Selected")
-            merge_action.triggered.connect(partial(self.merge, selected))
+            commit_action.setToolTip("Commits chosen folder")
+            merge_action = menu.addAction("Merge")
+            merge_action.setToolTip("Unfolds and combines chosen clusters")
+            merge_action2 = menu.addAction(f"Merge into {selected[0].data(Qt.DisplayRole)}")
+            merge_action2.setToolTip("Unfolds and combines chosen clusters")
+            combine_action = menu.addAction("Combine")
+            combine_action.setToolTip("combines chosen clusters")
+            combine_action2 = menu.addAction("Combine into {selected[0].data(Qt.DisplayRole)}")
+            combine_action2.setToolTip("combines chosen clusters")
+            rename_action = menu.addAction("rename")
+            if len(selected) == 1:
+                merge_action.setEnabled(False)
+                merge_action2.setEnabled(False)
+                combine_action.setEnabled(False)
+                combine_action2.setEnabled(False)
+
+            merge_action.triggered.connect(partial(self.merge,selected ,True,None))
+            merge_action2.triggered.connect(partial(self.merge,selected, True,selected[0]))
+            combine_action.triggered.connect(partial(self.merge,selected, False,None))
+            combine_action2.triggered.connect(partial(self.merge,selected, False,selected[0]))
             commit_action.triggered.connect(partial(self.commitNode, index))
+            rename_action.triggered.connect(partial(self.rename_cluster, index))
 
             # Add other actions to the menu if needed
 
             menu.exec_(self.viewport().mapToGlobal(point))
 
-    def merge(self, selectedNodes: typing.List[QModelIndex]):
-        self.clusterManager.merge([y.internalPointer() for y in selectedNodes])
+    def rename_cluster(self, index):
+        dialog = NameInputDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            new_name = dialog.get_new_name()
+            if new_name:
+                self.clusterManager.renameCluster(index, new_name)
+
+    def merge(self, selectedNodes: typing.List[QModelIndex],recursive = True , parent = None):
+        print(recursive)
+        self.clusterManager.merge([y.internalPointer() for y in selectedNodes],recursive = recursive , parent= parent if parent is None else parent.internalPointer())
 
     def commitNode(self, index):
         self.clusterManager.commit(index)
