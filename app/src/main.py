@@ -100,7 +100,7 @@ class ImageBrowser(QMainWindow):
         apply_changes_and_create_result_folder_action.triggered.connect(FileManager.copy_files)
 
         # Add the "Apply changes and create result" button
-        create_results_button = QPushButton("Apply changes and create result folders", self)
+        create_results_button = QPushButton("Apply changes and create result folders ", self)
         create_results_button.clicked.connect(apply_changes_and_create_result_folder_action.trigger)
         create_results_button.move(50, 0)
         self.tool_bar.addWidget(create_results_button)
@@ -110,6 +110,12 @@ class ImageBrowser(QMainWindow):
         create_snapshot_button.clicked.connect(create_database_snapshot)
         create_results_button.move(100, 0)
         self.tool_bar.addWidget(create_snapshot_button)
+
+        # Add the "Create database snapshot" button
+        settings_button = QPushButton("strangeButton", self)
+        settings_button.clicked.connect(self.open_kmeans_params_dialog)
+        settings_button.move(150, 0)
+        self.tool_bar.addWidget( settings_button)
 
         self.addToolBar(Qt.TopToolBarArea, self.tool_bar)
         self.tool_bar.setLayoutDirection(Qt.RightToLeft)

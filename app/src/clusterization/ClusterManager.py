@@ -147,10 +147,10 @@ class ClusterManager:
                 childs = []
                 if recursive:
                     _, childs = node.get_cluster_count()
-                self.CommitedModel.remove_element(node)
+                self.uncommit(node)
                 for child in childs:
                     cluster_set.add(child)
-                    self.CommitedModel.remove_element(child)
+                    self.uncommit(child)
         # Create new cluster
         name = "Merged" if recursive else "Combined"
         if parent is None:
