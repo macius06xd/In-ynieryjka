@@ -3,52 +3,69 @@ import shutil
 from datetime import datetime
 from app.cfg.Configuration import INITIAL_CLUSTERIZED_FOLDER, DATABASE_SNAPSHOTS
 
-def create_database_snapshot():
+def create_database_and_configuration_snapshot():
     
     if not os.path.exists(DATABASE_SNAPSHOTS):
         os.makedirs(DATABASE_SNAPSHOTS)
 
     current_datetime = datetime.now()
-    timestamp = current_datetime.strftime("%Y-%m-%d-%H-%M")
+    timestamp = current_datetime.strftime("%Y-%m-%d # %H-%M-%S")
 
+    # Tworzenie folderu o nazwie 'timestamp' w ścieżce DATABASE_SNAPSHOTS
+    snapshot_folder_path = os.path.join(DATABASE_SNAPSHOTS, timestamp)
+    os.makedirs(snapshot_folder_path)
+
+    # Kopiowanie pliku Database.db z dodanym timestamp w nazwie
     database_path = os.path.join(INITIAL_CLUSTERIZED_FOLDER, 'Database.db')
+    snapshot_database_path = os.path.join(snapshot_folder_path, f'Database_{timestamp}.db')
+    shutil.copyfile(database_path, snapshot_database_path)
 
-    snapshot_filename = f"Database_{timestamp}.db"
-    snapshot_path = os.path.join(DATABASE_SNAPSHOTS, snapshot_filename)
+    # Kopiowanie pliku Configuration.py z pakietu app.cfg z dodanym timestamp w nazwie
+    configuration_path = os.path.join('app', 'cfg', 'Configuration.py')
+    snapshot_configuration_path = os.path.join(snapshot_folder_path, f'Configuration_{timestamp}.py')
+    shutil.copyfile(configuration_path, snapshot_configuration_path)
 
-    shutil.copyfile(database_path, snapshot_path)
-    print(f"Snapshot created at {snapshot_path}")
+    print(f"Snapshot including Database.db and Configuration.py created at {snapshot_folder_path}")
 
-def replace_database_file_with_snapshot(filename):
+def replace_database_and_configuration_snapshot(timestamp):
+    
+    snapshot_database_path = os.path.join(DATABASE_SNAPSHOTS, timestamp, f'Database_{timestamp}.db')
+    temp_snapshot_database_path = os.path.join(INITIAL_CLUSTERIZED_FOLDER, f'Database_{timestamp}.db')
+    current_database_path = os.path.join(INITIAL_CLUSTERIZED_FOLDER, 'Database.db')
 
-    #Copy chosen snapshot to INITIAL_CLUSTERIZED_FOLDER
-    snapshot_path = os.path.join(DATABASE_SNAPSHOTS, filename)
+    snapshot_configuration_path = os.path.join(DATABASE_SNAPSHOTS, timestamp, f'Configuration_{timestamp}.py')
+    temp_snapshot_configuration_path = os.path.join('app', 'cfg', f'Configuration_{timestamp}.py')
+    current_configuration_path = os.path.join('app', 'cfg', 'Configuration.py')
+
     try:
-        # Copy chosen snapshot to DATABASE_SNAPSHOTS
-        shutil.copy(snapshot_path, INITIAL_CLUSTERIZED_FOLDER)
-        print(f"Snapshot copied to {INITIAL_CLUSTERIZED_FOLDER}")
-    except FileNotFoundError:
-        print(f"File {snapshot_path} doesn't exist")
-    except Exception as e:
-        print(f"Error during copying file: {e}")
+        # Usuń stary plik Database.db
+        if os.path.exists(current_database_path):
+            os.remove(current_database_path)
+            print(f"File {current_database_path} was deleted.")
         
-    #Remove old Database file
-    current_database_path = os.path.join(INITIAL_CLUSTERIZED_FOLDER, 'Database.py')
-    try:
-        os.remove(current_database_path)
-        print(f"File {current_database_path} was deleted.")
-    except FileNotFoundError:
-        print(f"File {current_database_path} not found.")
-    except Exception as e:
-        print(f"Error during deleting file: {e}")
+        # Kopiuj wybrany plik Database_timestamp.db do folderu INITIAL_CLUSTERIZED_FOLDER
+        shutil.copy(snapshot_database_path, temp_snapshot_database_path)
+        print(f"Database snapshot copied to {temp_snapshot_database_path}")
 
-    #Rename new snapshot to Database.py
-    filename_filepath = os.path.join(INITIAL_CLUSTERIZED_FOLDER, filename)
-    database_filepath = os.path.join(INITIAL_CLUSTERIZED_FOLDER, 'Database.py')
-    try:
-        os.rename(filename_filepath, database_filepath)
-        print(f"File {filename} renamed to {database_filepath}.")
+        # Zmień nazwę skopiowanego pliku bazy danych na Database.db
+        os.rename(temp_snapshot_database_path, current_database_path)
+        print(f"File {temp_snapshot_database_path} renamed to {current_database_path}.")
+
+        # Usuń stary plik Configuration.py
+        if os.path.exists(current_configuration_path):
+            os.remove(current_configuration_path)
+            print(f"File {current_configuration_path} was deleted.")
+        
+        # Kopiuj plik Configuration_timestamp.py do folderu app/cfg
+        shutil.copy(snapshot_configuration_path, temp_snapshot_configuration_path)
+        print(f"Configuration snapshot copied to {temp_snapshot_configuration_path}")
+
+        # Zmień nazwę skopiowanego pliku konfiguracji na Configuration.py
+        os.rename(temp_snapshot_configuration_path, current_configuration_path)
+        print(f"File {temp_snapshot_configuration_path} renamed to {current_configuration_path}.")
+
     except FileNotFoundError:
-        print(f"File {filename} doesn't exist in {INITIAL_CLUSTERIZED_FOLDER}.")
+        print(f"Some file doesn't exist")
     except Exception as e:
-        print(f"Error during renaming file: {e}")
+        print(f"Error during operation: {e}")
+

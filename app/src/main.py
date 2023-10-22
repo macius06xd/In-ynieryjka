@@ -12,7 +12,7 @@ from app.cfg.Configuration import RESIZED_IMAGES_SIZE, INITIAL_CLUSTERIZED_FOLDE
 from app.src.clusterization.ClusterManager import ClusterManager
 from app.src.tools.CreateResizedDataset import ImageResizeThreadPool
 from app.src.tools.CreateResultFolder import create_result_folders
-from app.src.tools.DatabaseSnapshotManager import create_database_snapshot
+from app.src.tools.DatabaseSnapshotManager import create_database_and_configuration_snapshot
 from app.src.file_system.FileSystem import FileSystem
 from app.src.gui.ImageViewer import ImageViewer
 from app.src.clusterization.InitialClusterization import ClusteringThread
@@ -107,7 +107,7 @@ class ImageBrowser(QMainWindow):
 
         # Add the "Create database snapshot" button
         create_snapshot_button = QPushButton("Create database snapshot", self)
-        create_snapshot_button.clicked.connect(create_database_snapshot)
+        create_snapshot_button.clicked.connect(create_database_and_configuration_snapshot)
         create_results_button.move(100, 0)
         self.tool_bar.addWidget(create_snapshot_button)
 
