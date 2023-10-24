@@ -17,6 +17,7 @@ def load_feature_vectors(vectors_path, image_files):
                 vectors.append(values)
                 continue
             except:
+                image_files.remove(img)
                 continue
         return vectors
 

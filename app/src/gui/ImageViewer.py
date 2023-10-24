@@ -75,7 +75,9 @@ class ImageViewer(QListView):
             action2.triggered.connect(partial(self.clusterCombine, index))
             menu.addAction(action2)
             # Add more actions as needed
-
+            action3 = QAction("Delete selected",self)
+            action3.triggered.connect(partial(self.delete_images,self.selectedIndexes()))
+            menu.addAction(action3)
             action = menu.exec_(self.mapToGlobal(event.pos()))
             if action is not None:
                 # Handle the selected action
@@ -121,7 +123,9 @@ class ImageViewer(QListView):
                 print("Condition self.dir.commited == 0 failed")
             else:
                 print("View Contain Commited Folder")
-
+    def delete_images(self,nodes):
+        for node in nodes:
+            self.onImageClicked(node)
     def onImageClicked(self, node):
         if not isinstance(node, PixmapItem):
             data = node.internalPointer()

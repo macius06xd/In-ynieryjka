@@ -6,7 +6,7 @@ from typing import List
 import h5py
 from app.cfg.Configuration import VECTORS_PATH
 import numpy as np
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, dbscan, DBSCAN
 
 import app.src.vectors.VectorFixWindow
 from app.src.clusterization.kmeans.KMeansParameters import KMeansParameters
@@ -91,7 +91,7 @@ class Cluster:
         if self.data_array.size != 0:
             kmeans.fit(self.data_array)
             second_elements = [item[1] for item in self.data_list]
-            item_clusters = kmeans.predict(second_elements)
+            item_clusters = kmeans.labels_
             for item, cluster in zip(self.data_list, item_clusters):
                 item[0].cluster = cluster
         print(f"Time of clusterization fit2 : {time.time() - start}")
