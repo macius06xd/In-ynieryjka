@@ -126,6 +126,7 @@ class ImageViewer(QListView):
     def delete_images(self,nodes):
         for node in nodes:
             self.onImageClicked(node)
+        self.clearSelection()
     def onImageClicked(self, node):
         if not isinstance(node, PixmapItem):
             data = node.internalPointer()
