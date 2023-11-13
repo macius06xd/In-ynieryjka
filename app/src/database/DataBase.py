@@ -283,7 +283,8 @@ class DataBaseConnection:
         for file in file_list:
             if hasattr(file,"cluster"):
                 if file.cluster:
-                    self.cursor.execute("update file_system set parent_id = ? where id = ? ", (node.id , file.id))
+                    id = file.id  if hasattr(file,"id") else file.node.id
+                    self.cursor.execute("update file_system set parent_id = ? where id = ? ", (node.id , id))
             self.cursor.execute("update file set parent_id = ? where id = ? ",
                            (node.id, file.node.id if hasattr(file, 'node') and hasattr(file.node, 'id') else file.id))
         self.connection.commit()

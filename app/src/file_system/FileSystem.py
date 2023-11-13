@@ -163,7 +163,7 @@ class FileSystem(QTreeView):
             merge_action2.setToolTip("Unfolds and combines chosen clusters")
             combine_action = menu.addAction("Combine")
             combine_action.setToolTip("combines chosen clusters")
-            combine_action2 = menu.addAction("Combine into {selected[0].data(Qt.DisplayRole)}")
+            combine_action2 = menu.addAction(f"Combine into {selected[0].data(Qt.DisplayRole)}")
             combine_action2.setToolTip("combines chosen clusters")
             rename_action = menu.addAction("rename")
             if len(selected) == 1:

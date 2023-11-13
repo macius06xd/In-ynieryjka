@@ -21,7 +21,7 @@ def create_database_and_configuration_snapshot():
     shutil.copyfile(database_path, snapshot_database_path)
 
     # Kopiowanie pliku Configuration.py z pakietu app.cfg z dodanym timestamp w nazwie
-    configuration_path = os.path.join('app', 'cfg', 'Configuration.py')
+    configuration_path = os.path.join('..', 'cfg', 'Configuration.py')
     snapshot_configuration_path = os.path.join(snapshot_folder_path, f'Configuration_{timestamp}.py')
     shutil.copyfile(configuration_path, snapshot_configuration_path)
 
