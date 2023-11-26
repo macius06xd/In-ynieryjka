@@ -38,7 +38,7 @@ class ImageViewer(QListView):
         self.setDragEnabled(True)
         self.acceptDrops()
         self.setWordWrap(True)
-        self.setSelectionMode(QAbstractItemView.ContiguousSelection)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setItemDelegate(ImageDelegate())
         self.selectionModel().selectionChanged.connect(self.manage_selection)
         self.ctrl_pressed = False
@@ -74,17 +74,27 @@ class ImageViewer(QListView):
             action2.triggered.connect(partial(self.clusterCombine, index))
             menu.addAction(action2)
             # Add more actions as needed
-            action3 = QAction("Delete selected",self)
-            action3.triggered.connect(partial(self.delete_images,self.selectedIndexes()))
+            action3 = QAction("Delete selected", self)
+            action3.triggered.connect(partial(self.delete_images, self.selectedIndexes()))
             menu.addAction(action3)
 
-            action4 = QAction("Open Parent",self)
-            action4.triggered.connect(lambda : self.recive_notification_from_FileSystem(index.internalPointer().node.parent))
+            action4 = QAction("Open Parent", self)
+            action4.triggered.connect(
+                lambda: self.recive_notification_from_FileSystem(index.internalPointer().node.parent))
             menu.addAction(action4)
+
+            action5 = QAction("Build new cluster at top level", self)
+            action5.triggered.connect(lambda: self.build_new_cluster(toplevel=True))
+            menu.addAction(action5)
+
+            action6 = QAction("Build new cluster at current dir", self)
+            action6.triggered.connect(lambda: self.build_new_cluster(toplevel=False))
+            menu.addAction(action6)
+
             action = menu.exec_(self.mapToGlobal(event.pos()))
         else:
             action1 = QAction("Back", self)
-            action1.triggered.connect(lambda : self.recive_notification_from_FileSystem(self.model().dir.parent))
+            action1.triggered.connect(lambda: self.recive_notification_from_FileSystem(self.model().dir.parent))
             menu.addAction(
                 action1
             )
@@ -92,6 +102,12 @@ class ImageViewer(QListView):
             if action is not None:
                 # Handle the selected action
                 pass
+
+    def build_new_cluster(self, toplevel=True):
+        ## get selected images
+        indexes = self.selectionModel().selectedIndexes()
+        image_list = [element.internalPointer() for element in indexes]
+        self.clusterManager.Build_new_cluster(image_list, None if toplevel else self.model().get_current_dir())
 
     def clusterCombine(self, index):
         data = index.internalPointer()
@@ -133,10 +149,12 @@ class ImageViewer(QListView):
                 print("Condition self.dir.commited == 0 failed")
             else:
                 print("View Contain Commited Folder")
-    def delete_images(self,nodes):
+
+    def delete_images(self, nodes):
         for node in nodes:
             self.onImageClicked(node)
         self.clearSelection()
+
     def onImageClicked(self, node):
         if not isinstance(node, PixmapItem):
             data = node.internalPointer()
@@ -146,7 +164,6 @@ class ImageViewer(QListView):
         # change to signal later
         self.image_deleted.emit(os.path.basename(data.path))
         self.model().layoutChanged.emit()
-
 
     def add_image(self, item):
         self.model().add(item)
@@ -233,6 +250,7 @@ class PixmapItem(QStandardItem):
 class MyListModel(QAbstractListModel):
     lista_changed = pyqtSignal()
     dir = None
+
     def __init__(self, datain, parent=None, *args):
         QAbstractListModel.__init__(self, parent, *args)
         self.listdata: array = datain
@@ -265,6 +283,7 @@ class MyListModel(QAbstractListModel):
             if self.data(index, Qt.UserRole) == item.get_path():
                 return index
         return QModelIndex()
+
     def getElementById(self, id):
         for row in range(self.rowCount()):
             index = self.index(row)
@@ -309,3 +328,6 @@ class MyListModel(QAbstractListModel):
                 self.add(item)
             for file in dir.children:
                 self.load_further(file)
+
+    def get_current_dir(self):
+        return self.dir

@@ -9,7 +9,7 @@ import app.cfg.Configuration
 from app.src.gui.CommitedLayout import CommitedFolderListModel
 from app.src.database.DataBase import DataBaseConnection
 from app.src.gui.ImageViewer import MyListModel
-from app.src.file_system.FileSystem import FileSystemModel, FileSystemNode
+from app.src.file_system.FileSystem import FileSystemModel, FileSystemNode , image
 
 
 # every operations on the clusters should be perfomed here
@@ -187,8 +187,27 @@ class ClusterManager:
             self.db.delete_clusters(to_delete)
             self.FileSystemModel.layoutChanged.emit()
             self.ImageViewerModel.layoutChanged.emit()
+    def Build_new_cluster(self, images , parent):
+        if parent is None:
+            for img in images:
+                self.ImageViewerModel.remove(img)
+        images = [element.node for element in images]
+        ### Construct new Node
+        if parent is None:
+            parent = self.FileSystemModel.get_root_node()
+        new_parent = FileSystemNode("CustomNode", "-", parent, True, False)
+        self.db.persist_new_node(new_parent)
+        parent.add_child(new_parent)
+        ### add images
+        for img in images:
+            self.change_parent(img,new_parent)
+        ### update database
+        self.db.update_parent(images,new_parent)
+        self.FileSystemModel.layoutChanged.emit()
+        self.ImageViewerModel.layoutChanged.emit()
 
-
-
+    def change_parent(self, img: 'image' , new_parent : 'FileSystemNode'):
+        img.parent.remove_images(img)
+        new_parent.add_image(img)
 
 
