@@ -64,9 +64,8 @@ class ImageViewer(QListView):
 
     def contextMenuEvent(self, event):
         index = self.indexAt(event.pos())
+        menu = QMenu(self)
         if index.isValid():
-            menu = QMenu(self)
-
             action1 = QAction("Delete", self)
             action1.triggered.connect(partial(self.onImageClicked, index))  # Connect function to the action
             menu.addAction(action1)
@@ -78,6 +77,17 @@ class ImageViewer(QListView):
             action3 = QAction("Delete selected",self)
             action3.triggered.connect(partial(self.delete_images,self.selectedIndexes()))
             menu.addAction(action3)
+
+            action4 = QAction("Open Parent",self)
+            action4.triggered.connect(lambda : self.recive_notification_from_FileSystem(index.internalPointer().node.parent))
+            menu.addAction(action4)
+            action = menu.exec_(self.mapToGlobal(event.pos()))
+        else:
+            action1 = QAction("Back", self)
+            action1.triggered.connect(lambda : self.recive_notification_from_FileSystem(self.model().dir.parent))
+            menu.addAction(
+                action1
+            )
             action = menu.exec_(self.mapToGlobal(event.pos()))
             if action is not None:
                 # Handle the selected action
@@ -274,16 +284,17 @@ class MyListModel(QAbstractListModel):
     def load_images_from_folder(self, dir):
         app.cfg.Configuration.time = time.time()
         self.listdata.clear()
-        self.dir = dir.internalPointer()
+        self.dir = dir
+        if dir is None:
+            return
         image_extensions = QImageReader.supportedImageFormats()
-        for file in dir.data(Qt.UserRole).children:
+        for file in self.dir.get_images():
             file_name = os.path.basename(file.path)
-            if file_name.split('.')[-1].encode() in image_extensions:
-                item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                self.add(item)
-            if file.cluster:
-                self.load_further(file)
+            item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            self.add(item)
+        for file in self.dir.children:
+            self.load_further(file)
         self.layoutChanged.emit()
         print(f"Loading Data Time: {time.time() - app.cfg.Configuration.time}")
 
@@ -291,11 +302,10 @@ class MyListModel(QAbstractListModel):
     def load_further(self, dir):
         image_extensions = QImageReader.supportedImageFormats()
         if not dir.commited:
-            for file in dir.children:
+            for file in dir.get_images():
                 file_name = os.path.basename(file.path)
-                if file_name.split('.')[-1].encode() in image_extensions:
-                    item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)
-                    item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                    self.add(item)
-                if file.cluster:
-                    self.load_further(file)
+                item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                self.add(item)
+            for file in dir.children:
+                self.load_further(file)

@@ -111,6 +111,13 @@ class ImageBrowser(QMainWindow):
         create_results_button.move(100, 0)
         self.tool_bar.addWidget(create_snapshot_button)
 
+        # Add the "Create database snapshot" button
+        Kmeans_button = QPushButton("Kmeans Parameters", self)
+        Kmeans_button.clicked.connect(self.open_kmeans_params_dialog)
+        create_results_button.move(150, 0)
+        self.tool_bar.addWidget(Kmeans_button)
+
+
         self.addToolBar(Qt.TopToolBarArea, self.tool_bar)
         self.tool_bar.setLayoutDirection(Qt.RightToLeft)
         ##################### TOOL BAR - END #######################

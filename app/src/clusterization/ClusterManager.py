@@ -1,3 +1,4 @@
+import itertools
 import time
 import typing
 
@@ -42,8 +43,6 @@ class ClusterManager:
         return self.CommitedModel.get_data()
 
     def clusterCombine(self, source, target):
-
-        # User selected an item
         self.uncommit(source)
         if target:
             files = [item for item in self.ImageViewerModel.listdata if item.node.parent == source]
@@ -52,8 +51,8 @@ class ClusterManager:
                 if is_view:
                     self.ImageViewerModel.remove(file)
                 file.node.parent = target
-            source.clear_childs()
-            target.add_child([element.node for element in files])
+            source.clear_images()
+            target.add_image([element.node for element in files])
             self.FileSystemModel.layoutChanged.emit()
             self.ImageViewerModel.layoutChanged.emit()
             db = DataBaseConnection()
@@ -82,7 +81,8 @@ class ClusterManager:
         self.CommitedModel.layoutChanged.emit()
 
     def load_images_from_folder(self, index):
-        self.ImageViewerModel.load_images_from_folder(index)
+
+        self.ImageViewerModel.load_images_from_folder(index.internalPointer())
 
     def Cluster(self, items: list, dir: QModelIndex, cluster_number):
         start = time.time()
@@ -102,12 +102,12 @@ class ClusterManager:
         for item in items:
             cluster = item.cluster
             if cluster is not None and 0 <= cluster < cluster_number:
-                node2: FileSystemNode = item.node
-                node2.parent.remove_child(node2)
+                node2 = item.node
+                node2.parent.remove_images(node2)
                 node2.parent = map[item.cluster]
                 clusters[cluster].append(node2)
         for i in range(0, cluster_number):
-            map[i].add_child(clusters[i])
+            map[i].add_image(clusters[i])
         print(f"File System Clusters : {time.time() - start}")
         self.db.cluster(node, map, cluster_number)
         print(time.time() - app.cfg.Configuration.time)
@@ -115,19 +115,15 @@ class ClusterManager:
         self.FileSystemModel.layoutChanged.emit()
         pass
 
-    # TODO Move to model
+    # TODO Move to model IDK WHAT THSI CODE IS AND I HAVE WRITTEN IT XD
     def delete_empty_clusters(self, dir):
-        child_clusters = [element for element in dir.children if element.cluster]
-        for child in child_clusters:
-            list = []
-            for inner_child in child.children:
-                if inner_child.cluster and inner_child.commited == 0:
-                    self.remove_recursion(inner_child)
-                    list.append(inner_child)
-            for i in list:
-                child.remove_child(i)
+        lista = []
+        for inner_child in dir.children:
+            if  inner_child.combined_children() == 0 and (inner_child.commited == 0 or inner_child.commited is None):
+                lista.append(inner_child)
+        dir.remove_child(lista)
 
-    # TODO Move to model
+    # TODO Move to model DEPRECIATED
     def remove_recursion(self, dir):
         list = []
         for inner_child in dir.children:
@@ -139,40 +135,60 @@ class ClusterManager:
         self.db.delete_cluster(dir)
 
     def merge(self, nodes: typing.List['FileSystemNode'], recursive=True, parent=None):
-        # Build list of nodes to transfer
-        cluster_set = set()
-        for node in nodes:
-            if node != parent:
-                cluster_set.add(node)
-                childs = []
-                if recursive:
-                    _, childs = node.get_cluster_count()
-                self.CommitedModel.remove_element(node)
-                for child in childs:
-                    cluster_set.add(child)
-                    self.CommitedModel.remove_element(child)
-        # Create new cluster
+        # Build new node if necessary
         name = "Merged" if recursive else "Combined"
         if parent is None:
             parent = FileSystemNode(name, "-", self.FileSystemModel.get_root_node(), True, False)
             self.db.persist_new_node(parent)
             self.FileSystemModel.get_root_node().add_child(parent)
-        # Build File List
-        # TODO nie budować tylko podać liste nodów
-        node_list = list()
-        for node in cluster_set:
-            for child in node.children:
-                node_list.append(child)
-        for node in cluster_set:
-            node.clear_childs()
-        # Update Tree and Database
-        to_delete = []
-        if recursive:
-            node_list = [node for node in node_list if node.cluster == False]
-            to_delete = [node for node in node_list if node.cluster == True]
-        parent.add_child(node_list)
+        # Recursive handling
+        if recursive :
+            nodes_set = set()
+            for node in nodes:
+                nodes_set.add(node)
+                _,childs  = node.get_cluster_count()
+                for child in childs:
+                    nodes_set.add(child)
+            image_list = []
+            for child in nodes_set:
+                image_list.extend(child.get_images())
+                child.clear_images()
+            parent.add_image(image_list)
+            self.db.update_parent(image_list, parent)
+            to_delete = [element for element in nodes_set if nodes_set != parent]
+            self.db.delete_clusters(to_delete)
+            self.FileSystemModel.layoutChanged.emit()
+            self.ImageViewerModel.layoutChanged.emit()
+        else:
+            for node1, node2 in itertools.combinations(nodes,2):
+                if node1.is_in_parent(node2) or node2.is_in_parent(node1):
+                    msg = QMessageBox()
+                    msg.setIcon(QMessageBox.Critical)
+                    msg.setText("Error")
+                    msg.setInformativeText(f"Nodes {node1.name} and {node2.name} have a parent-child relationship. Operation not performed")
+                    msg.setWindowTitle("Error")
+                    msg.exec_()  # Display the message box
+                    return
 
-        self.db.update_parent(node_list, parent)
-        self.db.delete_clusters(to_delete)
-        self.FileSystemModel.layoutChanged.emit()
-        self.ImageViewerModel.layoutChanged.emit()
+            if parent in nodes:
+                nodes.remove(parent)
+            image_list = []
+            node_list = []
+            for node in nodes:
+                image_list.extend(node.get_images())
+                node.clear_images()
+                node_list.extend(node.children)
+                node.clear_childs()
+            parent.add_image(image_list)
+            parent.add_child(node_list)
+            self.db.update_parent(image_list, parent)
+            self.db.update_parent(node_list, parent)
+            to_delete = [element for element in nodes if nodes != parent]
+            self.db.delete_clusters(to_delete)
+            self.FileSystemModel.layoutChanged.emit()
+            self.ImageViewerModel.layoutChanged.emit()
+
+
+
+
+

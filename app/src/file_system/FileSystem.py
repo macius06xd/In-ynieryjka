@@ -8,7 +8,7 @@ import typing
 from typing import Iterable
 
 from PyQt5.QtCore import QModelIndex, QDataStream, QIODevice, QMimeData, QByteArray, pyqtSignal, \
-    pyqtSlot
+    pyqtSlot, QSortFilterProxyModel
 from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import QTreeView, QVBoxLayout, QMenu, QAbstractItemView, QDialog
 
@@ -17,6 +17,16 @@ import app.cfg.Configuration
 import app.src.database.DataBase
 from app.src.tools.NameInputDialog import NameInputDialog
 
+class image:
+    def __init__(self,id,name,path,parent):
+        self.id = id
+        self.name = name
+        self.path = path
+        self.parent = parent
+    def set_parent(self,parent):
+        self.parent = parent
+    def is_in_parent(self,parent):
+        return self.parent.is_in_parent(parent)
 
 class FileSystemNode:
 
@@ -26,9 +36,8 @@ class FileSystemNode:
         self.path = path
         self.parent = parent
         self.children: list[FileSystemNode] = []
+        self.images  = []
         self.cluster = cluster
-        if commited is None:
-            commited = False
         self.commited = commited
         self.color_id = color_id
 
@@ -60,20 +69,36 @@ class FileSystemNode:
 
     def clear_childs(self):
         self.children.clear()
+    def get_images(self):
+        return self.images
 
+    def add_image(self,img):
+        if isinstance(img, Iterable):
+            for i in img:
+                self.images.append(i)
+                i.parent = self
+        else:
+            self.images.append(img)
+            img.parent = self
+
+    def remove_images(self,img):
+        if isinstance(img,Iterable):
+            for i in img:
+                self.images.remove(i)
+        else:
+            self.images.remove(img)
+    def combined_children(self):
+        return len(self.children) + len(self.images)
+    def clear_images(self):
+        self.images.clear()
     def get_cluster_count(self):
-        count = 0
-        cluster_list = []
-
-        if self.cluster and self.children:
-            count += 1
-            cluster_list.append(self)
+        count = len(self.children)
+        cluster_list = [child for child in self.children]
 
         for child in self.children:
-            if child.children:
-                child_count, child_clusters = child.get_cluster_count()
-                count += child_count
-                cluster_list.extend(child_clusters)
+            child_count, child_clusters = child.get_cluster_count()
+            count += child_count
+            cluster_list.extend(child_clusters)
 
         return count, cluster_list
 
@@ -82,8 +107,9 @@ class FileSystemNode:
             return False
         if node == self.parent:
             return True
+        if self.parent is None:
+            return False
         return self.parent.is_in_parent(node)
-
 
 class FileSystem(QTreeView):
     Node_Commited = pyqtSignal(FileSystemNode)
@@ -212,8 +238,7 @@ class FileSystem(QTreeView):
 
     def on_tree_clicked(self, index):
         self.current_index = index
-        if len(index.data(Qt.UserRole).children) != 0:
-            self.clusterManager.load_images_from_folder(index)
+        self.clusterManager.load_images_from_folder(index)
 
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
@@ -234,8 +259,10 @@ class FileSystemModel(QAbstractItemModel):
             parent_node = self.root_node
         else:
             parent_node = parent.internalPointer()
-
         child_node = parent_node.child(row)
+
+        if  not child_node.cluster:
+            return QModelIndex();
         if child_node:
             return self.createIndex(row, column, child_node)
         else:
@@ -268,7 +295,6 @@ class FileSystemModel(QAbstractItemModel):
             parent_node = self.root_node
         else:
             parent_node = parent.internalPointer()
-
         return len(parent_node.children)
 
     def columnCount(self, parent=QModelIndex()):
@@ -281,10 +307,10 @@ class FileSystemModel(QAbstractItemModel):
         node = index.internalPointer()
 
         if role == Qt.DisplayRole:
-            if role == Qt.DisplayRole:
-                name = node.name
-                count = len(node.children)
-                return f"{name} ({count})"
+            name = node.name
+            count = len(node.children)
+            count2 = len(node.images)
+            return f"{name} ({count}) [{count2}]"
         elif role == Qt.UserRole:
             return node
         elif role == Qt.FontRole:
@@ -336,12 +362,12 @@ class FileSystemModel(QAbstractItemModel):
     def populate_recursively(self, parent_node):
         for child_entry in scandir(parent_node.path):
             if child_entry.is_dir():
-                child_node = FileSystemNode(child_entry.name, child_entry.path, parent_node)
+                child_node = FileSystemNode(child_entry.name, child_entry.path, parent_node,True)
                 parent_node.add_child(child_node)
                 self.populate_recursively(child_node)
             else:
-                child_node = FileSystemNode(child_entry.name, child_entry.path, parent_node)
-                parent_node.add_child(child_node)
+                child_node = image(0,child_entry.name, child_entry.path, parent_node)
+                parent_node.add_image(child_node)
 
     def get_node_by_name(self, name):
         return self.get_node_recursively(self.root_node, name)

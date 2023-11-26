@@ -7,7 +7,7 @@ from app.cfg.Configuration import INITIAL_CLUSTERIZED_FOLDER
 from typing import TYPE_CHECKING, Dict
 
 if TYPE_CHECKING:
-    from app.src.file_system.FileSystem import FileSystemNode
+    from app.src.file_system.FileSystem import FileSystemNode, image
 from app.src.clusterization.kmeans.KMeansParameters import KMeansParameters
 
 
@@ -114,6 +114,7 @@ class DataBaseConnection:
         self.connection.commit()
     # Building a single node
     def _rebuild_node(self, data, parent_id=None, parent=None):
+        from app.src.file_system.FileSystem import image
         from app.src.file_system.FileSystem import FileSystemNode
         node = None
 
@@ -139,17 +140,19 @@ class DataBaseConnection:
         files_data = self.cursor.fetchall()
 
         for file_data in files_data:
-            file_node = FileSystemNode(file_data[1], file_data[2], node)
-            file_node.id = file_data[0]
-            node.add_child(file_node)
+            file_node = image(file_data[0],file_data[1],file_data[2],node)
+            node.add_image(file_node)
 
         return node
 
-    def _store_node(self, node: 'FileSystemNode', parent_id=None):
-        if node.name.endswith("jpg"):
+    def _store_node(self, node: 'FileSystemNode' or 'image', parent_id=None):
+        from app.src.file_system.FileSystem import image
+        if isinstance(node,image):
             query = "INSERT INTO file (name, path, parent_id) VALUES (?, ?, ?)"
             self.cursor.execute(query, (node.name, node.path, parent_id))
             file_id = self.cursor.lastrowid
+            node.id = file_id
+            return
         else:
             query = "INSERT INTO file_system (name, path, isCluster, parent_id, commited, color_id) VALUES (?, ?, ?, ?, ?, ?)"
             self.cursor.execute(query, (node.name, node.path, node.cluster, parent_id, 0, node.color_id))
@@ -158,7 +161,8 @@ class DataBaseConnection:
         node.id = file_id
         for child in node.children:
             self._store_node(child, parent_id=file_id)
-
+        for child in node.get_images():
+            self._store_node(child, parent_id=file_id)
         self.connection.commit()
 
     ## Function used to Build Cluster in database Dont Touch (when i wrote this god and me know what's going on, now only god knows)
@@ -179,14 +183,14 @@ class DataBaseConnection:
 
             # Update child IDs to match the correct clusters
             for cluster_node in clusters.values():
-                for child_node in cluster_node.children:
+                for child_node in cluster_node.get_images():
                     if child_node.parent.name in cluster_id_map:
                         parent_id_ = cluster_id_map[child_node.parent.name]
                     else:
                         # Create a new cluster in the database
                         self.cursor.execute(
                             "INSERT INTO file_system (name, path, isCluster, parent_id, color_id) VALUES (?, ?, ?, ?, ?)",
-                            (child_node.parent.name, child_node.parent.path, 1, parent_id, child_node.color_id))
+                            (child_node.parent.name, child_node.parent.path, 1, parent_id, child_node.parent.color_id))
                         self.connection.commit()
                         parent_id_ = self.cursor.lastrowid
                         cluster_id_map[child_node.parent.name] = parent_id_
@@ -230,7 +234,7 @@ class DataBaseConnection:
                 cluster_parent_id = child_ids[cluster_id]
                 cluster_node.id = cluster_parent_id
 
-                for child_node in cluster_node.children:
+                for child_node in cluster_node.get_images():
                     try :
                         self.cursor.execute(
                             "UPDATE file SET parent_id = ? WHERE id = ?",
@@ -295,7 +299,14 @@ class DataBaseConnection:
         self._store_node(node,id)
 
     def delete_clusters(self, to_delete):
+        # Disable foreign key constraints
+        self.cursor.execute("PRAGMA foreign_keys = OFF;")
+
+        # Delete nodes without following foreign key constraints
         for node in to_delete:
             self.cursor.execute("DELETE FROM file_system WHERE id = ?", (node.id,))
+
+        # Enable foreign key constraints and commit changes
+        self.cursor.execute("PRAGMA foreign_keys = ON;")
         self.connection.commit()
 

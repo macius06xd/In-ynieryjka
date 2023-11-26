@@ -29,7 +29,6 @@ class Cluster:
         self.rev = True
         self.perform()
         if len(self.broken_vectors) != 0:
-            print("Ocochodzi")
             window = app.src.vectors.VectorFixWindow.FileActionWindow(self.broken_vectors,self.remove_signal,self.data_list)
             window.exec_()
     def Reevaluate(self):
@@ -41,7 +40,6 @@ class Cluster:
             self.items = items
             self.perform()
             if len(self.broken_vectors) != 0:
-                print("Ocochodzi")
                 window = app.src.vectors.VectorFixWindow.FileActionWindow(self.broken_vectors, self.remove_signal, self.data_list)
                 window.exec_()
         self.fit()
@@ -54,7 +52,6 @@ class Cluster:
         array_size = 0
         print(len(self.items))
         for i, item in enumerate(self.items):
-
             file_path = item.get_path()
             file_name2, file_extension = os.path.splitext(os.path.basename(file_path))
             file_name2 = file_name2.replace("_small", "")

@@ -36,6 +36,10 @@ class CommitedFilesListView(QListView):
             action2.triggered.connect(partial(self.uncommit, index))  # Connect function to the action
             menu.addAction(action2)
 
+            action3 = QAction("open", self)
+            action3.triggered.connect(lambda : self.clusterManager.load_images_from_folder(index))  # Connect function to the action
+            menu.addAction(action3)
+
             # Add more actions as needed
 
             action = menu.exec_(self.mapToGlobal(event.pos()))
@@ -250,7 +254,7 @@ class CommitedFolderDelegate(QStyledItemDelegate):
         element = index.data(Qt.DisplayRole)
         name = element.name
         try:
-            image_path = os.path.join(RESIZED_IMAGES_PATH, element.children[0].name)
+            image_path = os.path.join(RESIZED_IMAGES_PATH, element.get_images[0].name)
             image = QPixmap(image_path)
         except:
             icon = QApplication.style().standardIcon(QStyle.SP_DialogOkButton)
@@ -277,7 +281,7 @@ class CommitedFolderDelegate(QStyledItemDelegate):
 
         else:
             try:
-                image_path = os.path.join(RESIZED_IMAGES_PATH, element.children[0].name)
+                image_path = os.path.join(RESIZED_IMAGES_PATH, element.get_images[0].name)
                 image = QPixmap(image_path)
             except:
                 icon = QApplication.style().standardIcon(QStyle.SP_DialogOkButton)
