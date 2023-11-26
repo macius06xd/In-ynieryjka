@@ -17,7 +17,7 @@ import app.cfg.Configuration
 import app.src.database.DataBase
 from app.src.tools.NameInputDialog import NameInputDialog
 
-class image:
+class Image:
     def __init__(self,id,name,path,parent):
         self.id = id
         self.name = name
@@ -366,7 +366,7 @@ class FileSystemModel(QAbstractItemModel):
                 parent_node.add_child(child_node)
                 self.populate_recursively(child_node)
             else:
-                child_node = image(0,child_entry.name, child_entry.path, parent_node)
+                child_node = Image(0, child_entry.name, child_entry.path, parent_node)
                 parent_node.add_image(child_node)
 
     def get_node_by_name(self, name):

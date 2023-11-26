@@ -9,7 +9,7 @@ import app.cfg.Configuration
 from app.src.gui.CommitedLayout import CommitedFolderListModel
 from app.src.database.DataBase import DataBaseConnection
 from app.src.gui.ImageViewer import MyListModel
-from app.src.file_system.FileSystem import FileSystemModel, FileSystemNode , image
+from app.src.file_system.FileSystem import FileSystemModel, FileSystemNode , Image
 
 
 # every operations on the clusters should be perfomed here
@@ -206,7 +206,7 @@ class ClusterManager:
         self.FileSystemModel.layoutChanged.emit()
         self.ImageViewerModel.layoutChanged.emit()
 
-    def change_parent(self, img: 'image' , new_parent : 'FileSystemNode'):
+    def change_parent(self, img: 'Image', new_parent : 'FileSystemNode'):
         img.parent.remove_images(img)
         new_parent.add_image(img)
 

@@ -7,7 +7,7 @@ from app.cfg.Configuration import INITIAL_CLUSTERIZED_FOLDER
 from typing import TYPE_CHECKING, Dict
 
 if TYPE_CHECKING:
-    from app.src.file_system.FileSystem import FileSystemNode, image
+    from app.src.file_system.FileSystem import FileSystemNode, Image
 from app.src.clusterization.kmeans.KMeansParameters import KMeansParameters
 
 
@@ -114,7 +114,7 @@ class DataBaseConnection:
         self.connection.commit()
     # Building a single node
     def _rebuild_node(self, data, parent_id=None, parent=None):
-        from app.src.file_system.FileSystem import image
+        from app.src.file_system.FileSystem import Image
         from app.src.file_system.FileSystem import FileSystemNode
         node = None
 
@@ -140,14 +140,14 @@ class DataBaseConnection:
         files_data = self.cursor.fetchall()
 
         for file_data in files_data:
-            file_node = image(file_data[0],file_data[1],file_data[2],node)
+            file_node = Image(file_data[0], file_data[1], file_data[2], node)
             node.add_image(file_node)
 
         return node
 
-    def _store_node(self, node: 'FileSystemNode' or 'image', parent_id=None):
-        from app.src.file_system.FileSystem import image
-        if isinstance(node,image):
+    def _store_node(self, node: 'FileSystemNode' or 'Image', parent_id=None):
+        from app.src.file_system.FileSystem import Image
+        if isinstance(node, Image):
             query = "INSERT INTO file (name, path, parent_id) VALUES (?, ?, ?)"
             self.cursor.execute(query, (node.name, node.path, parent_id))
             file_id = self.cursor.lastrowid
