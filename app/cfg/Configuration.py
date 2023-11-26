@@ -74,5 +74,13 @@ color_mapping = {
     28: QColor(75, 75, 0),
     29: QColor(0, 75, 75),
     30: QColor(75, 0, 75)
-    # Add more cluster-color mappings as needed
 }
+color_state = 0
+def get_next_color():
+    global color_state
+    color_id = color_state
+    color_state = color_state +1
+    if color_state >= len(color_mapping):
+        color_state = 0
+    return color_id
+

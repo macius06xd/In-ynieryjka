@@ -249,12 +249,12 @@ class PixmapItem(QStandardItem):
 
 class MyListModel(QAbstractListModel):
     lista_changed = pyqtSignal()
-    dir = None
 
     def __init__(self, datain, parent=None, *args):
         QAbstractListModel.__init__(self, parent, *args)
         self.listdata: array = datain
         self.mime_type = "application/x-qabstractitemmodeldatalist"
+        self.prev_color = None
 
     def rowCount(self, parent=QModelIndex()):
         return len(self.listdata)

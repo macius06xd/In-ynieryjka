@@ -29,4 +29,7 @@ class NameInputDialog(QDialog):
             super().keyPressEvent(event)
 
     def get_new_name(self):
-        return self.input_edit.text()
+        name = self.input_edit.text()
+        if name=="trash":
+            name = "trash_"
+        return name

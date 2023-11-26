@@ -95,7 +95,7 @@ class ClusterManager:
         if node is not None:
             for i in range(len(ready_clusters), cluster_number):
                 cluster_node = FileSystemNode(dir_name + "-" + str(i), "-", node, True)
-                cluster_node.color_id = i
+                cluster_node.color_id = app.cfg.Configuration.get_next_color()
                 map[i] = cluster_node
                 node.add_child(cluster_node)
         clusters = [[] for _ in range(cluster_number + 1)]  # Create k empty lists to hold the items
@@ -200,14 +200,27 @@ class ClusterManager:
         parent.add_child(new_parent)
         ### add images
         for img in images:
-            self.change_parent(img,new_parent)
+            self.change_parent_image(img,new_parent)
         ### update database
         self.db.update_parent(images,new_parent)
         self.FileSystemModel.layoutChanged.emit()
         self.ImageViewerModel.layoutChanged.emit()
 
-    def change_parent(self, img: 'Image', new_parent : 'FileSystemNode'):
+    def change_parent_image(self, img: 'Image', new_parent : 'FileSystemNode'):
         img.parent.remove_images(img)
         new_parent.add_image(img)
+
+    def change_parent_cluster(self,cluster :"FileSystemNode" , new_parent : 'FileSystemNode'):
+        cluster.parent.remove_child(cluster)
+        new_parent.add_child(cluster)
+
+    def thrash_clusters(self,clusters : typing.List['FileSystemNode']):
+        trash = self.FileSystemModel.get_trash()
+        for cluster in clusters:
+            self.change_parent_cluster(cluster,trash)
+        self.db.update_parent(clusters, trash)
+        self.FileSystemModel.layoutChanged.emit()
+        self.ImageViewerModel.layoutChanged.emit()
+
 
 

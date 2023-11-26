@@ -296,9 +296,22 @@ class DataBaseConnection:
     def persist_new_node(self,node):
         self.cursor.execute("select id from file_system where parent_id is NULL")
         id = self.cursor.fetchone()[0]
+        node.color_id = app.cfg.Configuration.get_next_color()
         self._store_node(node,id)
 
     def delete_clusters(self, to_delete):
+        # Disable foreign key constraints
+        self.cursor.execute("PRAGMA foreign_keys = OFF;")
+
+        # Delete nodes without following foreign key constraints
+        for node in to_delete:
+            self.cursor.execute("DELETE FROM file_system WHERE id = ?", (node.id,))
+
+        # Enable foreign key constraints and commit changes
+        self.cursor.execute("PRAGMA foreign_keys = ON;")
+        self.connection.commit()
+
+    def trash_clusters(self, to_delete):
         # Disable foreign key constraints
         self.cursor.execute("PRAGMA foreign_keys = OFF;")
 

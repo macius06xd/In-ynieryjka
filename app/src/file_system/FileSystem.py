@@ -192,23 +192,26 @@ class FileSystem(QTreeView):
             combine_action2 = menu.addAction(f"Combine into {selected[0].data(Qt.DisplayRole)}")
             combine_action2.setToolTip("combines chosen clusters")
             rename_action = menu.addAction("rename")
+            delete_action = menu.addAction("move to trash")
+
             if len(selected) == 1:
                 merge_action.setEnabled(False)
                 merge_action2.setEnabled(False)
                 combine_action.setEnabled(False)
                 combine_action2.setEnabled(False)
-
             merge_action.triggered.connect(partial(self.merge,selected ,True,None))
             merge_action2.triggered.connect(partial(self.merge,selected, True,selected[0]))
             combine_action.triggered.connect(partial(self.merge,selected, False,None))
             combine_action2.triggered.connect(partial(self.merge,selected, False,selected[0]))
             commit_action.triggered.connect(partial(self.commitNode, index))
             rename_action.triggered.connect(partial(self.rename_cluster, index))
-
+            delete_action.triggered.connect(partial(self.delete_cluster))
             # Add other actions to the menu if needed
 
             menu.exec_(self.viewport().mapToGlobal(point))
-
+    def delete_cluster(self):
+        selected = self.selectedIndexes()
+        self.clusterManager.thrash_clusters([element.internalPointer() for element in selected])
     def rename_cluster(self, index):
         dialog = NameInputDialog(self)
         if dialog.exec_() == QDialog.Accepted:
@@ -371,7 +374,8 @@ class FileSystemModel(QAbstractItemModel):
 
     def get_node_by_name(self, name):
         return self.get_node_recursively(self.root_node, name)
-
+    def get_trash(self):
+        return self.get_node_recursively(self.root_node , "trash")
     def rebuild_file_system_model(self):
         db = app.src.database.DataBase.DataBaseConnection()
         return db.rebuild_file_system_model('/')
