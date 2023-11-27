@@ -5,6 +5,7 @@ from sklearn.cluster import KMeans
 import h5py
 import numpy as np
 
+from app.cfg.Configuration import print_memory_usage
 # Import the KMeansParameters class
 from app.src.clusterization.kmeans.KMeansParameters import KMeansParameters
 
@@ -33,6 +34,7 @@ class ClusteringThread(QThread):
 
     def run(self):
         print("zaczynam")
+        print_memory_usage()
         image_files = os.listdir(self.images_folder)
         image_files = [img for img in image_files if img.endswith(".jpg")]
         count = 0
@@ -59,3 +61,5 @@ class ClusteringThread(QThread):
             shutil.copy(os.path.join(self.images_folder, img), os.path.join(dest_folder, img))
             count = count + 1
             self.progress_updated.emit(int(count/len(image_files)*100))
+        print_memory_usage()
+

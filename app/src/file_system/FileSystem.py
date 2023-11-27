@@ -17,16 +17,20 @@ import app.cfg.Configuration
 import app.src.database.DataBase
 from app.src.tools.NameInputDialog import NameInputDialog
 
+
 class Image:
-    def __init__(self,id,name,path,parent):
+    def __init__(self, id, name, path, parent):
         self.id = id
         self.name = name
         self.path = path
         self.parent = parent
-    def set_parent(self,parent):
+
+    def set_parent(self, parent):
         self.parent = parent
-    def is_in_parent(self,parent):
+
+    def is_in_parent(self, parent):
         return self.parent.is_in_parent(parent)
+
 
 class FileSystemNode:
 
@@ -36,7 +40,7 @@ class FileSystemNode:
         self.path = path
         self.parent = parent
         self.children: list[FileSystemNode] = []
-        self.images  = []
+        self.images = []
         self.cluster = cluster
         self.commited = commited
         self.color_id = color_id
@@ -69,10 +73,11 @@ class FileSystemNode:
 
     def clear_childs(self):
         self.children.clear()
+
     def get_images(self):
         return self.images
 
-    def add_image(self,img):
+    def add_image(self, img):
         if isinstance(img, Iterable):
             for i in img:
                 self.images.append(i)
@@ -81,16 +86,19 @@ class FileSystemNode:
             self.images.append(img)
             img.parent = self
 
-    def remove_images(self,img):
-        if isinstance(img,Iterable):
+    def remove_images(self, img):
+        if isinstance(img, Iterable):
             for i in img:
                 self.images.remove(i)
         else:
             self.images.remove(img)
+
     def combined_children(self):
         return len(self.children) + len(self.images)
+
     def clear_images(self):
         self.images.clear()
+
     def get_cluster_count(self):
         count = len(self.children)
         cluster_list = [child for child in self.children]
@@ -102,6 +110,11 @@ class FileSystemNode:
 
         return count, cluster_list
 
+    def get_number_of_commited_children(self):
+        count = sum(1 for child in self.children if child.commited)
+        for child in self.children:
+            count += child.get_number_of_commited_children()
+        return count
     def is_in_parent(self, node):
         if node.parent is None:
             return False
@@ -110,6 +123,7 @@ class FileSystemNode:
         if self.parent is None:
             return False
         return self.parent.is_in_parent(node)
+
 
 class FileSystem(QTreeView):
     Node_Commited = pyqtSignal(FileSystemNode)
@@ -136,6 +150,8 @@ class FileSystem(QTreeView):
         self.setAllColumnsShowFocus(True)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.setToolTipDuration(1000)
+        self.setDragEnabled(True)
+        self.setDragDropMode(QAbstractItemView.InternalMove)
         self.customContextMenuRequested.connect(self.showContextMenu)
         self.model().rowsAboutToBeRemoved.connect(self.rowsRemoved)
         self.model().layoutChanged.connect(self.changed)
@@ -193,25 +209,32 @@ class FileSystem(QTreeView):
             combine_action2.setToolTip("combines chosen clusters")
             rename_action = menu.addAction("rename")
             delete_action = menu.addAction("move to trash")
-
+            top_action = menu.addAction("Move to root")
             if len(selected) == 1:
                 merge_action.setEnabled(False)
                 merge_action2.setEnabled(False)
                 combine_action.setEnabled(False)
                 combine_action2.setEnabled(False)
-            merge_action.triggered.connect(partial(self.merge,selected ,True,None))
-            merge_action2.triggered.connect(partial(self.merge,selected, True,selected[0]))
-            combine_action.triggered.connect(partial(self.merge,selected, False,None))
-            combine_action2.triggered.connect(partial(self.merge,selected, False,selected[0]))
+            merge_action.triggered.connect(partial(self.merge, selected, True, None))
+            merge_action2.triggered.connect(partial(self.merge, selected, True, selected[0]))
+            combine_action.triggered.connect(partial(self.merge, selected, False, None))
+            combine_action2.triggered.connect(partial(self.merge, selected, False, selected[0]))
             commit_action.triggered.connect(partial(self.commitNode, index))
             rename_action.triggered.connect(partial(self.rename_cluster, index))
             delete_action.triggered.connect(partial(self.delete_cluster))
+            top_action.triggered.connect(self.move_to_top)
             # Add other actions to the menu if needed
 
             menu.exec_(self.viewport().mapToGlobal(point))
+
     def delete_cluster(self):
         selected = self.selectedIndexes()
         self.clusterManager.thrash_clusters([element.internalPointer() for element in selected])
+
+    def move_to_top(self):
+        selected = self.selectedIndexes()
+        self.clusterManager.top_clusters([element.internalPointer() for element in selected])
+
     def rename_cluster(self, index):
         dialog = NameInputDialog(self)
         if dialog.exec_() == QDialog.Accepted:
@@ -219,9 +242,10 @@ class FileSystem(QTreeView):
             if new_name:
                 self.clusterManager.renameCluster(index, new_name)
 
-    def merge(self, selectedNodes: typing.List[QModelIndex],recursive = True , parent = None):
+    def merge(self, selectedNodes: typing.List[QModelIndex], recursive=True, parent=None):
         print(recursive)
-        self.clusterManager.merge([y.internalPointer() for y in selectedNodes],recursive = recursive , parent= parent if parent is None else parent.internalPointer())
+        self.clusterManager.merge([y.internalPointer() for y in selectedNodes], recursive=recursive,
+                                  parent=parent if parent is None else parent.internalPointer())
 
     def commitNode(self, index):
         self.clusterManager.commit(index)
@@ -243,7 +267,11 @@ class FileSystem(QTreeView):
         self.current_index = index
         self.clusterManager.load_images_from_folder(index)
 
-
+    def dropEvent(self, event):
+        drop_index = self.indexAt(event.pos())
+        if drop_index.isValid():
+            selected_indexes = self.selectedIndexes()
+            self.clusterManager.drop_clusters([element.internalPointer() for element in selected_indexes],drop_index.internalPointer())
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
 from os import scandir
 
@@ -264,7 +292,7 @@ class FileSystemModel(QAbstractItemModel):
             parent_node = parent.internalPointer()
         child_node = parent_node.child(row)
 
-        if  not child_node.cluster:
+        if not child_node.cluster:
             return QModelIndex();
         if child_node:
             return self.createIndex(row, column, child_node)
@@ -313,7 +341,8 @@ class FileSystemModel(QAbstractItemModel):
             name = node.name
             count = len(node.children)
             count2 = len(node.images)
-            return f"{name} ({count}) [{count2}]"
+            count3 = node.get_number_of_commited_children()
+            return f"{name} ({count}) [{count2}] <{count3}>"
         elif role == Qt.UserRole:
             return node
         elif role == Qt.FontRole:
@@ -365,7 +394,7 @@ class FileSystemModel(QAbstractItemModel):
     def populate_recursively(self, parent_node):
         for child_entry in scandir(parent_node.path):
             if child_entry.is_dir():
-                child_node = FileSystemNode(child_entry.name, child_entry.path, parent_node,True)
+                child_node = FileSystemNode(child_entry.name, child_entry.path, parent_node, True)
                 parent_node.add_child(child_node)
                 self.populate_recursively(child_node)
             else:
@@ -374,8 +403,10 @@ class FileSystemModel(QAbstractItemModel):
 
     def get_node_by_name(self, name):
         return self.get_node_recursively(self.root_node, name)
+
     def get_trash(self):
-        return self.get_node_recursively(self.root_node , "trash")
+        return self.get_node_recursively(self.root_node, "trash")
+
     def rebuild_file_system_model(self):
         db = app.src.database.DataBase.DataBaseConnection()
         return db.rebuild_file_system_model('/')
@@ -394,7 +425,6 @@ class FileSystemModel(QAbstractItemModel):
                     return node
 
         return None
-
     def get_commited_nodes(self):
         commited_nodes = []
 

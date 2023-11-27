@@ -146,7 +146,7 @@ class DataBaseConnection:
         return node
 
     def _store_node(self, node: 'FileSystemNode' or 'Image', parent_id=None):
-        from app.src.file_system.FileSystem import Image
+        from app.src.file_system.FileSystem import Image , FileSystemNode
         if isinstance(node, Image):
             query = "INSERT INTO file (name, path, parent_id) VALUES (?, ?, ?)"
             self.cursor.execute(query, (node.name, node.path, parent_id))
@@ -163,7 +163,8 @@ class DataBaseConnection:
             self._store_node(child, parent_id=file_id)
         for child in node.get_images():
             self._store_node(child, parent_id=file_id)
-        self.connection.commit()
+        if isinstance(node,FileSystemNode):
+            self.connection.commit()
 
     ## Function used to Build Cluster in database Dont Touch (when i wrote this god and me know what's going on, now only god knows)
     ## Na serio nie dotykac

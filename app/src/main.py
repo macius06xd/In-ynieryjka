@@ -123,7 +123,6 @@ class ImageBrowser(QMainWindow):
         ##################### TOOL BAR - END #######################
 
         self.dir_tree.commit()
-        self.showFullScreen()
 
         if app.cfg.Configuration.is_it_run_first_time == 1:
             self.prompt_for_cluster_count()
@@ -227,7 +226,7 @@ class ImageBrowser(QMainWindow):
 
     def set_is_it_run_first_time_zero(self):
         app.cfg.Configuration.is_it_run_first_time = 0
-
+from app.cfg.Configuration import print_memory_usage
 
 class ResizeThread(QThread):
     def __init__(self, input_path, output_path, parent):

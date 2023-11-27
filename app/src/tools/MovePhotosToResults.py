@@ -13,25 +13,25 @@ class FileManager:
         cursor = conn.cursor()
 
         # Pobranie informacji o plikach
-        cursor.execute("SELECT name, parent_id FROM file")
+        cursor.execute("SELECT name, parent_id,path FROM file")
         files = cursor.fetchall()
 
         for file in files:
-            name, parent_id = file
+            name, parent_id , path = file
 
             # Pobranie nazwy folderu
             cursor.execute("SELECT name FROM file_system WHERE id = ?", (parent_id,))
             destination_folder_name = cursor.fetchone()[0]
 
             # Pelna sciezka pliku do skopiowania
-            source_file_path = os.path.join(INITIAL_IMAGES_FOLDER, name)
+            source_file_path = path
 
             # Sciezka folderu w ktorym bedzie sie znajdowal plik
             destination_folder_path = os.path.join(RESULTS_PATH, destination_folder_name)
             # Pelna sciezka pliku pod ktorym bedzie sie znajdowal plik
             destination_file_path = os.path.join(destination_folder_path, name)
 
-            if os.path.exists(destination_folder_path) and os.path.isdir(destination_folder_path):
+            if os.path.exists(destination_folder_path) and os.path.isdir(destination_folder_path) and name != "Database.db":
                 #print("Folder istnieje, kopiuje plik.")
                 shutil.copy2(source_file_path, destination_file_path)
             else:

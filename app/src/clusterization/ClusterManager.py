@@ -70,7 +70,11 @@ class ClusterManager:
         self.CommitedModel.layoutChanged.emit()
 
     def commit(self, index):
+
         node: FileSystemNode = index.data(Qt.UserRole)
+        if node.children:
+            QMessageBox.critical(None, "Error", "Cant commit Cluster with sub-clusters", QMessageBox.Ok)
+            return
         node.cluster = True
         count, childs = node.get_cluster_count()
         for child in childs:
@@ -214,6 +218,13 @@ class ClusterManager:
         cluster.parent.remove_child(cluster)
         new_parent.add_child(cluster)
 
+    def drop_clusters(self,clusters, target):
+        if target in clusters:
+            clusters.remove(target)
+        for index in clusters:
+            self.change_parent_cluster(index,target)
+        self.db.update_parent(clusters,target)
+        self.FileSystemModel.layoutChanged.emit()
     def thrash_clusters(self,clusters : typing.List['FileSystemNode']):
         trash = self.FileSystemModel.get_trash()
         for cluster in clusters:
@@ -221,6 +232,15 @@ class ClusterManager:
         self.db.update_parent(clusters, trash)
         self.FileSystemModel.layoutChanged.emit()
         self.ImageViewerModel.layoutChanged.emit()
+
+    def top_clusters(self, clusters: typing.List['FileSystemNode']):
+        trash = self.FileSystemModel.get_root_node()
+        for cluster in clusters:
+            self.change_parent_cluster(cluster, trash)
+        self.db.update_parent(clusters, trash)
+        self.FileSystemModel.layoutChanged.emit()
+        self.ImageViewerModel.layoutChanged.emit()
+
 
 
 

@@ -7,7 +7,8 @@ from PyQt5.QtCore import Qt, QSize, QEvent, pyqtSignal, QModelIndex, QAbstractLi
     QDataStream, QIODevice, QVariant, QRect
 from PyQt5.QtGui import QPixmap, QImageReader, QStandardItem, QPen, QColor, QDrag
 from PyQt5.QtWidgets import (QListView, QAbstractItemView, QMessageBox,
-                             QStyle, QStyledItemDelegate, QWidget, QMenu, QAction, QInputDialog)
+                             QStyle, QStyledItemDelegate, QWidget, QMenu, QAction, QInputDialog, QDialog, QVBoxLayout,
+                             QListWidget)
 
 import app.cfg.Configuration
 from app.cfg.Configuration import RESIZED_IMAGES_PATH
@@ -109,6 +110,28 @@ class ImageViewer(QListView):
         image_list = [element.internalPointer() for element in indexes]
         self.clusterManager.Build_new_cluster(image_list, None if toplevel else self.model().get_current_dir())
 
+    class CustomSelectionDialog(QDialog):
+        def __init__(self, items):
+            super().__init__()
+            self.setWindowTitle("Choose Item")
+            layout = QVBoxLayout()
+            self.list_widget = QListWidget()
+            self.list_widget.addItems(items)
+
+            layout.addWidget(self.list_widget)
+            self.setLayout(layout)
+
+            self.selected_item = None
+
+            self.list_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
+
+        def on_item_double_clicked(self, item):
+            self.selected_item = item.text()
+            self.accept()
+
+        def get_selected_item(self):
+            return self.selected_item
+
     def clusterCombine(self, index):
         data = index.internalPointer()
         parent = data.node.parent
@@ -116,15 +139,17 @@ class ImageViewer(QListView):
         item_names = [item.name for item in items if item != parent]
         # Add a cancel option to the list
         item_names.append("Cancel")
-        # Show the input dialog menu
-        selected_item, ok = QInputDialog.getItem(self, "Choose Item", "Select an item:", item_names, editable=False)
-        if ok and selected_item:
-            if selected_item == "Cancel":
-                # User chose to cancel the operation
-                QMessageBox.information(self, "Cancel", "Operation cancelled.")
-            else:
+
+        dialog = self.CustomSelectionDialog(item_names)
+        result = dialog.exec_()
+
+        if result == QDialog.Accepted:
+            selected_item = dialog.get_selected_item()
+            if selected_item and selected_item != "Cancel":
                 selected_node = next((item for item in items if item.name == selected_item), None)
                 self.clusterManager.clusterCombine(parent, selected_node)
+            else:
+                QMessageBox.information(self, "Cancel", "Operation cancelled.")
 
     # Clusterization Behaviour
     def slider_changed(self, value):
@@ -153,7 +178,7 @@ class ImageViewer(QListView):
     def delete_images(self, nodes):
         for node in nodes:
             self.onImageClicked(node)
-        self.clearSelection()
+        self.selectionModel().clearSelection()
 
     def onImageClicked(self, node):
         if not isinstance(node, PixmapItem):
@@ -310,7 +335,6 @@ class MyListModel(QAbstractListModel):
         for file in self.dir.get_images():
             file_name = os.path.basename(file.path)
             item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)
-            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             self.add(item)
         for file in self.dir.children:
             self.load_further(file)
@@ -319,12 +343,10 @@ class MyListModel(QAbstractListModel):
 
     # Recurssion for loading
     def load_further(self, dir):
-        image_extensions = QImageReader.supportedImageFormats()
         if not dir.commited:
             for file in dir.get_images():
                 file_name = os.path.basename(file.path)
                 item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.add(item)
             for file in dir.children:
                 self.load_further(file)

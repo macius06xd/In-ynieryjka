@@ -1,7 +1,7 @@
 from PyQt5.QtGui import QColor
 
 # 1. folder with raw images - images in initial state, all in one folder
-INITIAL_IMAGES_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\klockitesty"
+INITIAL_IMAGES_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\testowy"
 #INITIAL_IMAGES_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\milion_zdjec"
 #INITIAL_IMAGES_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\caly_set_pomieszane"
 #INITIAL_IMAGES_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\initial_images_folder"
@@ -10,11 +10,6 @@ INITIAL_IMAGES_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\klockitesty"
 INITIAL_CLUSTERIZED_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\pliczki"
 #INITIAL_CLUSTERIZED_FOLDER = r"D:\initial_clusterized_folder"
 #INITIAL_CLUSTERIZED_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\initial_clusterized_folder"
-
-# 3. folder which contains original-sized images (equal to 2(???))
-DEFAULT_IMAGES_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\klocki"
-#DEFAULT_IMAGES_PATH = r"D:\initial_clusterized_folder"
-#DEFAULT_IMAGES_PATH = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki"
 
 # 4. output folder for CreateResizedDataset. It contains resized images with "_small" at the end
 RESIZED_IMAGES_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\small"
@@ -84,3 +79,21 @@ def get_next_color():
         color_state = 0
     return color_id
 
+def print_memory_usage():
+    # Get information about memory usage by your program
+    import psutil
+    process = psutil.Process()
+    memory_info = process.memory_info()
+
+    # Get the amount of memory currently used by your program in bytes
+    memory_used = memory_info.rss
+
+    # Get the total physical memory available on the system
+    total_memory = psutil.virtual_memory().total
+
+    # Get the amount of available memory on the system
+    available_memory = psutil.virtual_memory().available
+
+    print(f"Memory used by your program: {memory_used} bytes")
+    print(f"Total physical memory on the system: {total_memory} bytes")
+    print(f"Available memory on the system: {available_memory} bytes")

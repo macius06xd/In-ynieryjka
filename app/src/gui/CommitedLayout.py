@@ -1,15 +1,14 @@
 import os
 from functools import partial
-from typing import TYPE_CHECKING
 
 from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, QRect
 from PyQt5.QtGui import QPixmap, QFont, QFontMetrics
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QListView, QStyledItemDelegate, QDialog, QPushButton, QGridLayout, QStyle, QMenu, QAction
 )
+from typing import TYPE_CHECKING
 
 from app.cfg.Configuration import *
-
 from app.src.database.DataBase import DataBaseConnection
 from app.src.tools.NameInputDialog import NameInputDialog
 
@@ -254,7 +253,7 @@ class CommitedFolderDelegate(QStyledItemDelegate):
         element = index.data(Qt.DisplayRole)
         name = element.name
         try:
-            image_path = os.path.join(RESIZED_IMAGES_PATH, element.get_images[0].name)
+            image_path = os.path.join(RESIZED_IMAGES_PATH, element.get_images()[0].name)
             image = QPixmap(image_path)
         except:
             icon = QApplication.style().standardIcon(QStyle.SP_DialogOkButton)
@@ -281,7 +280,7 @@ class CommitedFolderDelegate(QStyledItemDelegate):
 
         else:
             try:
-                image_path = os.path.join(RESIZED_IMAGES_PATH, element.get_images[0].name)
+                image_path = os.path.join(RESIZED_IMAGES_PATH, element.get_images()[0].name)
                 image = QPixmap(image_path)
             except:
                 icon = QApplication.style().standardIcon(QStyle.SP_DialogOkButton)
@@ -295,7 +294,7 @@ class CommitedFolderDelegate(QStyledItemDelegate):
 
         # Load the image
         try:
-            image_path = os.path.join(RESIZED_IMAGES_PATH, element.children[0].name)
+            image_path = os.path.join(RESIZED_IMAGES_PATH, element.get_images()[0].name)
             image = QPixmap(image_path)
         except:
             icon = QApplication.style().standardIcon(QStyle.SP_DialogOkButton)
