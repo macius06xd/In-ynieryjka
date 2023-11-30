@@ -2,6 +2,7 @@ import time
 import re
 from array import array
 from functools import partial
+from typing import Iterable
 
 from PyQt5.QtCore import Qt, QSize, QEvent, pyqtSignal, QModelIndex, QAbstractListModel, QMimeData, QByteArray, \
     QDataStream, QIODevice, QVariant, QRect
@@ -68,7 +69,7 @@ class ImageViewer(QListView):
         menu = QMenu(self)
         if index.isValid():
             action1 = QAction("Delete", self)
-            action1.triggered.connect(partial(self.onImageClicked, index))  # Connect function to the action
+            action1.triggered.connect(partial(self.onImageClicked, index.internalPointer()))  # Connect function to the action
             menu.addAction(action1)
 
             action2 = QAction("Combine with commit", self)
@@ -176,18 +177,20 @@ class ImageViewer(QListView):
                 print("View Contain Commited Folder")
 
     def delete_images(self, nodes):
-        for node in nodes:
-            self.onImageClicked(node)
+        self.onImageClicked([n.internalPointer() for n in nodes],0)
         self.selectionModel().clearSelection()
 
-    def onImageClicked(self, node):
-        if not isinstance(node, PixmapItem):
-            data = node.internalPointer()
+    def onImageClicked(self, nodes,mode = 1):
+        if isinstance(nodes,Iterable):
+            for n in nodes:
+                self.model().remove(n)
         else:
-            data = node
-        self.model().remove(data)
+            self.model().remove(nodes)
         # change to signal later
-        self.image_deleted.emit(os.path.basename(data.path))
+        if(mode):
+            self.clusterManager.delete_images_pernament(nodes)
+        else:
+            self.clusterManager.delete_images(nodes)
         self.model().layoutChanged.emit()
 
     def add_image(self, item):
@@ -343,7 +346,7 @@ class MyListModel(QAbstractListModel):
 
     # Recurssion for loading
     def load_further(self, dir):
-        if not dir.commited:
+        if not dir.commited and dir.cluster:
             for file in dir.get_images():
                 file_name = os.path.basename(file.path)
                 item = PixmapItem(os.path.join(RESIZED_IMAGES_PATH, file_name), file)

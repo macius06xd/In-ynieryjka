@@ -9,7 +9,7 @@ import app.cfg.Configuration
 from app.src.gui.CommitedLayout import CommitedFolderListModel
 from app.src.database.DataBase import DataBaseConnection
 from app.src.gui.ImageViewer import MyListModel
-from app.src.file_system.FileSystem import FileSystemModel, FileSystemNode , Image
+from app.src.file_system.FileSystem import FileSystemModel, FileSystemNode, Image
 
 
 # every operations on the clusters should be perfomed here
@@ -123,9 +123,11 @@ class ClusterManager:
     def delete_empty_clusters(self, dir):
         lista = []
         for inner_child in dir.children:
-            if  inner_child.combined_children() == 0 and (inner_child.commited == 0 or inner_child.commited is None):
-                lista.append(inner_child)
+            if inner_child.combined_children() == 0 and (inner_child.commited == 0 or inner_child.commited is None):
+                if (inner_child.cluster):
+                    lista.append(inner_child)
         dir.remove_child(lista)
+        self.db.delete_clusters(lista)
 
     # TODO Move to model DEPRECIATED
     def remove_recursion(self, dir):
@@ -146,11 +148,11 @@ class ClusterManager:
             self.db.persist_new_node(parent)
             self.FileSystemModel.get_root_node().add_child(parent)
         # Recursive handling
-        if recursive :
+        if recursive:
             nodes_set = set()
             for node in nodes:
                 nodes_set.add(node)
-                _,childs  = node.get_cluster_count()
+                _, childs = node.get_cluster_count()
                 for child in childs:
                     nodes_set.add(child)
             image_list = []
@@ -164,12 +166,13 @@ class ClusterManager:
             self.FileSystemModel.layoutChanged.emit()
             self.ImageViewerModel.layoutChanged.emit()
         else:
-            for node1, node2 in itertools.combinations(nodes,2):
+            for node1, node2 in itertools.combinations(nodes, 2):
                 if node1.is_in_parent(node2) or node2.is_in_parent(node1):
                     msg = QMessageBox()
                     msg.setIcon(QMessageBox.Critical)
                     msg.setText("Error")
-                    msg.setInformativeText(f"Nodes {node1.name} and {node2.name} have a parent-child relationship. Operation not performed")
+                    msg.setInformativeText(
+                        f"Nodes {node1.name} and {node2.name} have a parent-child relationship. Operation not performed")
                     msg.setWindowTitle("Error")
                     msg.exec_()  # Display the message box
                     return
@@ -191,7 +194,8 @@ class ClusterManager:
             self.db.delete_clusters(to_delete)
             self.FileSystemModel.layoutChanged.emit()
             self.ImageViewerModel.layoutChanged.emit()
-    def Build_new_cluster(self, images , parent):
+
+    def Build_new_cluster(self, images, parent):
         if parent is None:
             for img in images:
                 self.ImageViewerModel.remove(img)
@@ -204,31 +208,32 @@ class ClusterManager:
         parent.add_child(new_parent)
         ### add images
         for img in images:
-            self.change_parent_image(img,new_parent)
+            self.change_parent_image(img, new_parent)
         ### update database
-        self.db.update_parent(images,new_parent)
+        self.db.update_parent(images, new_parent)
         self.FileSystemModel.layoutChanged.emit()
         self.ImageViewerModel.layoutChanged.emit()
 
-    def change_parent_image(self, img: 'Image', new_parent : 'FileSystemNode'):
+    def change_parent_image(self, img: 'Image', new_parent: 'FileSystemNode'):
         img.parent.remove_images(img)
         new_parent.add_image(img)
 
-    def change_parent_cluster(self,cluster :"FileSystemNode" , new_parent : 'FileSystemNode'):
+    def change_parent_cluster(self, cluster: "FileSystemNode", new_parent: 'FileSystemNode'):
         cluster.parent.remove_child(cluster)
         new_parent.add_child(cluster)
 
-    def drop_clusters(self,clusters, target):
+    def drop_clusters(self, clusters, target):
         if target in clusters:
             clusters.remove(target)
         for index in clusters:
-            self.change_parent_cluster(index,target)
-        self.db.update_parent(clusters,target)
+            self.change_parent_cluster(index, target)
+        self.db.update_parent(clusters, target)
         self.FileSystemModel.layoutChanged.emit()
-    def thrash_clusters(self,clusters : typing.List['FileSystemNode']):
+
+    def thrash_clusters(self, clusters: typing.List['FileSystemNode']):
         trash = self.FileSystemModel.get_trash()
         for cluster in clusters:
-            self.change_parent_cluster(cluster,trash)
+            self.change_parent_cluster(cluster, trash)
         self.db.update_parent(clusters, trash)
         self.FileSystemModel.layoutChanged.emit()
         self.ImageViewerModel.layoutChanged.emit()
@@ -241,6 +246,13 @@ class ClusterManager:
         self.FileSystemModel.layoutChanged.emit()
         self.ImageViewerModel.layoutChanged.emit()
 
+    def delete_images_pernament(self, images):
+        self.db.delete_pernaments(images)
 
-
-
+    def delete_images(self, images):
+        from app.src.gui.ImageViewer import PixmapItem
+        trash = self.FileSystemModel.get_trash()
+        for img in images:
+            img.node.parent.remove_images(img.node if isinstance(img,PixmapItem) else img)
+        trash.add_image(images)
+        self.db.delete_file(images)

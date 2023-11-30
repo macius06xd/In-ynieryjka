@@ -292,8 +292,6 @@ class FileSystemModel(QAbstractItemModel):
             parent_node = parent.internalPointer()
         child_node = parent_node.child(row)
 
-        if not child_node.cluster:
-            return QModelIndex();
         if child_node:
             return self.createIndex(row, column, child_node)
         else:
@@ -394,7 +392,10 @@ class FileSystemModel(QAbstractItemModel):
     def populate_recursively(self, parent_node):
         for child_entry in scandir(parent_node.path):
             if child_entry.is_dir():
+
                 child_node = FileSystemNode(child_entry.name, child_entry.path, parent_node, True)
+                if child_entry.name == 'trash':
+                    child_node.cluster = False
                 parent_node.add_child(child_node)
                 self.populate_recursively(child_node)
             else:

@@ -7,7 +7,7 @@ from PyQt5.QtGui import QColor
 #INITIAL_IMAGES_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\initial_images_folder"
 INITIAL_IMAGES_FOLDER = R"C:\Users\wojte\PycharmProjects\pythonProject10\result\Nowy folder"
 # 2.folder with raw images but after first, general clusterization
-INITIAL_CLUSTERIZED_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\pliczki2"
+INITIAL_CLUSTERIZED_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\pliczki3"
 #INITIAL_CLUSTERIZED_FOLDER = r"D:\initial_clusterized_folder"
 #INITIAL_CLUSTERIZED_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\initial_clusterized_folder"
 
@@ -20,7 +20,7 @@ RESIZED_IMAGES_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\small"
 VECTORS_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\xception2.hdf"
 #VECTORS_PATH=r"D:\half_mln.hdf"
 #VECTORS_PATH = r"C:\Users\logix\Desktop\inzynierka\xception2.hdf"
-VECTORS_PATH = r"C:\Users\wojte\PycharmProjects\pythonProject10\image_features.hdf"
+#VECTORS_PATH = r"C:\Users\wojte\PycharmProjects\pythonProject10\image_features.hdf"
 # 6. path of directory with final results
 RESULTS_PATH = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\wyniki"
 #RESULTS_PATH = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\results_path"
@@ -31,7 +31,7 @@ DATABASE_SNAPSHOTS = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\database_snapshots"
 
 # Size of images in pixels after resizing
 RESIZED_IMAGES_SIZE = 64
-
+BATCH_SIZE = 10000
 time = 0
 
 # Variable used to decide whether create or load database

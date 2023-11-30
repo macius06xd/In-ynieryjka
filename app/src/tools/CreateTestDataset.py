@@ -39,5 +39,5 @@ if __name__ == "__main__":
     # Source folder to ten oryginalny gdzie jest lego->Bricks,Plates itd. -> 3332, 3432, 3212 itd.
     source_folder = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\klocki"
     # Tutaj bedzie 10k zdjec
-    destination_folder = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\testowy"
-    copy_images(source_folder, destination_folder, limit=10000)
+    destination_folder = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\testowy32"
+    copy_images(source_folder, destination_folder, limit=1000000)

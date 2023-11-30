@@ -4,13 +4,11 @@ import time
 
 import app.cfg.Configuration
 from app.cfg.Configuration import INITIAL_CLUSTERIZED_FOLDER
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, Iterable
 
 if TYPE_CHECKING:
     from app.src.file_system.FileSystem import FileSystemNode, Image
 from app.src.clusterization.kmeans.KMeansParameters import KMeansParameters
-
-
 
 
 class DataBaseConnection:
@@ -24,7 +22,6 @@ class DataBaseConnection:
         self._create_file_system_table()
         self._create_file_table()
         self._create_kmeans_parameters_table()
-
 
     def _create_file_system_table(self):
         query = """
@@ -112,6 +109,7 @@ class DataBaseConnection:
                                     self.kmeans_params.precompute_distances, self.kmeans_params.algorithm,
                                     self.kmeans_params.n_jobs, self.kmeans_params.verbose))
         self.connection.commit()
+
     # Building a single node
     def _rebuild_node(self, data, parent_id=None, parent=None):
         from app.src.file_system.FileSystem import Image
@@ -146,7 +144,7 @@ class DataBaseConnection:
         return node
 
     def _store_node(self, node: 'FileSystemNode' or 'Image', parent_id=None):
-        from app.src.file_system.FileSystem import Image , FileSystemNode
+        from app.src.file_system.FileSystem import Image, FileSystemNode
         if isinstance(node, Image):
             query = "INSERT INTO file (name, path, parent_id) VALUES (?, ?, ?)"
             self.cursor.execute(query, (node.name, node.path, parent_id))
@@ -228,19 +226,18 @@ class DataBaseConnection:
 
             start_time = time.time()
 
-
             # Step 3: Update the parent for each child node to the correct cluster
             for cluster_id, cluster_node in clusters.items():
                 cluster_parent_id = child_ids[cluster_id]
                 cluster_node.id = cluster_parent_id
 
                 for child_node in cluster_node.get_images():
-                    try :
+                    try:
                         self.cursor.execute(
                             "UPDATE file SET parent_id = ? WHERE id = ?",
                             (cluster_parent_id, child_node.id))
                     except:
-                        print (child_node)
+                        print(child_node)
 
             self.connection.commit()
             update_clusters_time = time.time() - start_time
@@ -249,7 +246,7 @@ class DataBaseConnection:
             total_time = create_children_time + update_clusters_time
             print(f"Total Time: {total_time} seconds")
 
-    def delete_cluster(self,node):
+    def delete_cluster(self, node):
         self.cursor.execute("DELETE FROM file_system WHERE id = ?", (node.id,))
         self.connection.commit()
 
@@ -270,34 +267,58 @@ class DataBaseConnection:
         self.connection.commit()
 
     # Moves file to trash
-    def deletefile(self, node: 'FileSystemNode'):
+    def delete_file(self,images ):
         self.cursor.execute("select id from file_system where name = 'trash'")
         row = self.cursor.fetchone()
-        self.cursor.execute("update file set parent_id = ? where id = ? ", (row[0], node.id))
+        if isinstance(images, Iterable):
+            for i in images:
+                if hasattr(i, 'node'):
+                    self.cursor.execute("update file set parent_id = ? where id = ? ", (row[0], i.node.id))
+                else:
+                    self.cursor.execute("update file set parent_id = ? where id = ? ", (row[0], i.id))
+        else:
+            if hasattr(images, 'node'):
+                self.cursor.execute("update file set parent_id = ? where id = ? ", (row[0], images.node.id))
+            else:
+                self.cursor.execute("update file set parent_id = ? where id = ? ", (row[0], images.id))
         self.connection.commit()
-    def delete_pernaments(self, node: 'FileSystemNode'):
-        self.cursor.execute("delete file where id = ? ", node.id)
 
-    def renamefile(self,name,id):
-        self.cursor.execute("update file_system set name = ? where id = ?",(name,id))
+
+    def delete_pernaments(self, images):
+        if isinstance(images, Iterable):
+            for i in images:
+                if hasattr(i, 'node'):
+                    self.cursor.execute("delete from file where id = ? ", (i.node.id,))
+                else:
+                    self.cursor.execute("delete from file where id = ? ", (i.id,))
+        else:
+            if hasattr(images, 'node'):
+                self.cursor.execute("delete from file where id = ? ", (images.node.id,))
+            else:
+                self.cursor.execute("delete from file where id = ? ", (images.id,))
         self.connection.commit()
 
-    #TODO write some util functions
-    def update_parent(self , file_list : list , node : 'FileSystemNode'):
+    def renamefile(self, name, id):
+        self.cursor.execute("update file_system set name = ? where id = ?", (name, id))
+        self.connection.commit()
+
+    # TODO write some util functions
+    def update_parent(self, file_list: list, node: 'FileSystemNode'):
         for file in file_list:
-            if hasattr(file,"cluster"):
+            if hasattr(file, "cluster"):
                 if file.cluster:
-                    id = file.id  if hasattr(file,"id") else file.node.id
-                    self.cursor.execute("update file_system set parent_id = ? where id = ? ", (node.id , id))
+                    id = file.id if hasattr(file, "id") else file.node.id
+                    self.cursor.execute("update file_system set parent_id = ? where id = ? ", (node.id, id))
             self.cursor.execute("update file set parent_id = ? where id = ? ",
-                           (node.id, file.node.id if hasattr(file, 'node') and hasattr(file.node, 'id') else file.id))
+                                (node.id,
+                                 file.node.id if hasattr(file, 'node') and hasattr(file.node, 'id') else file.id))
         self.connection.commit()
 
-    def persist_new_node(self,node):
+    def persist_new_node(self, node):
         self.cursor.execute("select id from file_system where parent_id is NULL")
         id = self.cursor.fetchone()[0]
         node.color_id = app.cfg.Configuration.get_next_color()
-        self._store_node(node,id)
+        self._store_node(node, id)
 
     def delete_clusters(self, to_delete):
         # Disable foreign key constraints
@@ -322,4 +343,3 @@ class DataBaseConnection:
         # Enable foreign key constraints and commit changes
         self.cursor.execute("PRAGMA foreign_keys = ON;")
         self.connection.commit()
-
