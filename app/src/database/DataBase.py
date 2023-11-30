@@ -163,8 +163,7 @@ class DataBaseConnection:
             self._store_node(child, parent_id=file_id)
         for child in node.get_images():
             self._store_node(child, parent_id=file_id)
-        if isinstance(node,FileSystemNode):
-            self.connection.commit()
+        self.connection.commit()
 
     ## Function used to Build Cluster in database Dont Touch (when i wrote this god and me know what's going on, now only god knows)
     ## Na serio nie dotykac

@@ -159,7 +159,7 @@ class ClusterManager:
                 child.clear_images()
             parent.add_image(image_list)
             self.db.update_parent(image_list, parent)
-            to_delete = [element for element in nodes_set if nodes_set != parent]
+            to_delete = [element for element in nodes_set if element != parent]
             self.db.delete_clusters(to_delete)
             self.FileSystemModel.layoutChanged.emit()
             self.ImageViewerModel.layoutChanged.emit()
@@ -187,7 +187,7 @@ class ClusterManager:
             parent.add_child(node_list)
             self.db.update_parent(image_list, parent)
             self.db.update_parent(node_list, parent)
-            to_delete = [element for element in nodes if nodes != parent]
+            to_delete = [element for element in nodes if element != parent]
             self.db.delete_clusters(to_delete)
             self.FileSystemModel.layoutChanged.emit()
             self.ImageViewerModel.layoutChanged.emit()
