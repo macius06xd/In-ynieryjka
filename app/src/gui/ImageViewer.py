@@ -190,7 +190,8 @@ class ImageViewer(QListView):
         if(mode):
             self.clusterManager.delete_images_pernament(nodes)
         else:
-            self.clusterManager.delete_images(nodes)
+            self.clusterManager.delete_images(nodes if isinstance(nodes, Iterable) else [nodes])
+
         self.model().layoutChanged.emit()
 
     def add_image(self, item):

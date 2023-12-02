@@ -66,7 +66,6 @@ class Cluster:
                 self.data_array.append(data)  # Append data directly to the list
             else:
                 print("Brakuje vektorka")
-                self.data_list.remove(item)
                 self.error = True
                 self.broken_vectors.append(item)
 

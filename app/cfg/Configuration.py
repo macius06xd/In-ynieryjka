@@ -1,11 +1,11 @@
 from PyQt5.QtGui import QColor
 
 # 1. folder with raw images - images in initial state, all in one folder
-#INITIAL_IMAGES_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\testowy"
+INITIAL_IMAGES_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\testowy"
 #INITIAL_IMAGES_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\milion_zdjec"
 #INITIAL_IMAGES_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\caly_set_pomieszane"
 #INITIAL_IMAGES_FOLDER = r"C:\Users\logix\Desktop\inzynierka\Inzynierka\klocki\initial_images_folder"
-INITIAL_IMAGES_FOLDER = R"C:\Users\wojte\PycharmProjects\pythonProject10\result\Nowy folder"
+#INITIAL_IMAGES_FOLDER = R"C:\Users\wojte\PycharmProjects\pythonProject10\result\Nowy folder"
 # 2.folder with raw images but after first, general clusterization
 INITIAL_CLUSTERIZED_FOLDER = r"C:\Users\wojte\OneDrive\Pulpit\pulpit\pliczki3"
 #INITIAL_CLUSTERIZED_FOLDER = r"D:\initial_clusterized_folder"
